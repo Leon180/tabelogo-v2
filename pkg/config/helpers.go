@@ -59,11 +59,22 @@ func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
 func getEnvAsSlice(key string, defaultValue []string) []string {
 	if value := os.Getenv(key); value != "" {
 		parts := strings.Split(value, ",")
-		// Trim spaces from each part
-		for i := range parts {
-			parts[i] = strings.TrimSpace(parts[i])
+		result := make([]string, 0, len(parts))
+		// Trim spaces and filter empty strings
+		for _, part := range parts {
+			if trimmed := strings.TrimSpace(part); trimmed != "" {
+				result = append(result, trimmed)
+			}
 		}
-		return parts
+		if len(result) > 0 {
+			return result
+		}
 	}
 	return defaultValue
+}
+
+// normalizeEnvironment normalizes environment string to lowercase
+// Ensures consistent environment checking across the application
+func normalizeEnvironment(env string) string {
+	return strings.ToLower(strings.TrimSpace(env))
 }

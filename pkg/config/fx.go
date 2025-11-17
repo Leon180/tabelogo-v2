@@ -6,10 +6,11 @@ import (
 
 // Module provides config for FX dependency injection
 // Usage:
-//   fx.New(
-//     config.Module,
-//     fx.Invoke(func(cfg *config.Config) { ... }),
-//   )
+//
+//	fx.New(
+//	  config.Module,
+//	  fx.Invoke(func(cfg *config.Config) { ... }),
+//	)
 var Module = fx.Module("config",
 	fx.Provide(New),
 )

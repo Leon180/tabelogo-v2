@@ -66,45 +66,50 @@ type JWTConfig struct {
 
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
+	return LoadWithPrefix("")
+}
+
+// LoadWithPrefix loads configuration from environment variables with prefix
+func LoadWithPrefix(prefix string) (*Config, error) {
 	cfg := &Config{
-		Environment: getEnvWithDefault("ENVIRONMENT", "development"),
-		LogLevel:    getEnvWithDefault("LOG_LEVEL", "info"),
-		ServerPort:  getEnvAsInt("SERVER_PORT", 8080),
-		GRPCPort:    getEnvAsInt("GRPC_PORT", 9090),
+		Environment: normalizeEnvironment(getEnvWithDefault(buildEnvKey(prefix, "ENVIRONMENT"), "development")),
+		LogLevel:    getEnvWithDefault(buildEnvKey(prefix, "LOG_LEVEL"), "info"),
+		ServerPort:  getEnvAsInt(buildEnvKey(prefix, "SERVER_PORT"), 8080),
+		GRPCPort:    getEnvAsInt(buildEnvKey(prefix, "GRPC_PORT"), 9090),
 	}
 
 	// Load database config
 	cfg.Database = DatabaseConfig{
-		Host:            getEnvWithDefault("DB_HOST", "localhost"),
-		Port:            getEnvAsInt("DB_PORT", 5432),
-		Name:            getEnvWithDefault("DB_NAME", ""),
-		User:            getEnvWithDefault("DB_USER", "postgres"),
-		Password:        getEnvWithDefault("DB_PASSWORD", "postgres"),
-		SSLMode:         getEnvWithDefault("DB_SSLMODE", "disable"),
-		MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 100),
-		MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 10),
-		ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", time.Hour),
+		Host:            getEnvWithDefault(buildEnvKey(prefix, "DB_HOST"), "localhost"),
+		Port:            getEnvAsInt(buildEnvKey(prefix, "DB_PORT"), 5432),
+		Name:            getEnvWithDefault(buildEnvKey(prefix, "DB_NAME"), ""),
+		User:            getEnvWithDefault(buildEnvKey(prefix, "DB_USER"), "postgres"),
+		Password:        getEnvWithDefault(buildEnvKey(prefix, "DB_PASSWORD"), "postgres"),
+		SSLMode:         getEnvWithDefault(buildEnvKey(prefix, "DB_SSLMODE"), "disable"),
+		MaxOpenConns:    getEnvAsInt(buildEnvKey(prefix, "DB_MAX_OPEN_CONNS"), 100),
+		MaxIdleConns:    getEnvAsInt(buildEnvKey(prefix, "DB_MAX_IDLE_CONNS"), 10),
+		ConnMaxLifetime: getEnvAsDuration(buildEnvKey(prefix, "DB_CONN_MAX_LIFETIME"), time.Hour),
 	}
 
 	// Load Redis config
 	cfg.Redis = RedisConfig{
-		Host:     getEnvWithDefault("REDIS_HOST", "localhost"),
-		Port:     getEnvAsInt("REDIS_PORT", 6379),
-		Password: getEnvWithDefault("REDIS_PASSWORD", ""),
-		DB:       getEnvAsInt("REDIS_DB", 0),
+		Host:     getEnvWithDefault(buildEnvKey(prefix, "REDIS_HOST"), "localhost"),
+		Port:     getEnvAsInt(buildEnvKey(prefix, "REDIS_PORT"), 6379),
+		Password: getEnvWithDefault(buildEnvKey(prefix, "REDIS_PASSWORD"), ""),
+		DB:       getEnvAsInt(buildEnvKey(prefix, "REDIS_DB"), 0),
 	}
 
 	// Load Kafka config
 	cfg.Kafka = KafkaConfig{
-		Brokers: getEnvWithDefault("KAFKA_BROKERS", "localhost:9092"),
-		GroupID: getEnvWithDefault("KAFKA_GROUP_ID", "tabelogo-group"),
+		Brokers: getEnvWithDefault(buildEnvKey(prefix, "KAFKA_BROKERS"), "localhost:9092"),
+		GroupID: getEnvWithDefault(buildEnvKey(prefix, "KAFKA_GROUP_ID"), "tabelogo-group"),
 	}
 
 	// Load JWT config
 	cfg.JWT = JWTConfig{
-		Secret:             getEnvWithDefault("JWT_SECRET", "change-me-in-production"),
-		AccessTokenExpire:  getEnvAsDuration("JWT_ACCESS_TOKEN_EXPIRE", 15*time.Minute),
-		RefreshTokenExpire: getEnvAsDuration("JWT_REFRESH_TOKEN_EXPIRE", 7*24*time.Hour),
+		Secret:             getEnvWithDefault(buildEnvKey(prefix, "JWT_SECRET"), "change-me-in-production"),
+		AccessTokenExpire:  getEnvAsDuration(buildEnvKey(prefix, "JWT_ACCESS_TOKEN_EXPIRE"), 15*time.Minute),
+		RefreshTokenExpire: getEnvAsDuration(buildEnvKey(prefix, "JWT_REFRESH_TOKEN_EXPIRE"), 7*24*time.Hour),
 	}
 
 	// Validate required fields
@@ -117,14 +122,92 @@ func Load() (*Config, error) {
 
 // Validate validates the configuration
 func (c *Config) Validate() error {
+	// Validate database configuration
 	if c.Database.Name == "" {
 		return fmt.Errorf("DB_NAME is required")
 	}
-
-	if c.JWT.Secret == "change-me-in-production" && c.Environment == "production" {
-		return fmt.Errorf("JWT_SECRET must be set in production")
+	if err := validatePort(c.Database.Port, "DB_PORT"); err != nil {
+		return err
+	}
+	if c.Database.MaxOpenConns <= 0 {
+		return fmt.Errorf("DB_MAX_OPEN_CONNS must be positive, got %d", c.Database.MaxOpenConns)
+	}
+	if c.Database.MaxIdleConns <= 0 {
+		return fmt.Errorf("DB_MAX_IDLE_CONNS must be positive, got %d", c.Database.MaxIdleConns)
+	}
+	if c.Database.MaxIdleConns > c.Database.MaxOpenConns {
+		return fmt.Errorf("DB_MAX_IDLE_CONNS (%d) cannot exceed DB_MAX_OPEN_CONNS (%d)",
+			c.Database.MaxIdleConns, c.Database.MaxOpenConns)
+	}
+	if c.Database.ConnMaxLifetime < 0 {
+		return fmt.Errorf("DB_CONN_MAX_LIFETIME must be non-negative")
 	}
 
+	// Validate server ports
+	if err := validatePort(c.ServerPort, "SERVER_PORT"); err != nil {
+		return err
+	}
+	if err := validatePort(c.GRPCPort, "GRPC_PORT"); err != nil {
+		return err
+	}
+	if c.ServerPort == c.GRPCPort {
+		return fmt.Errorf("SERVER_PORT and GRPC_PORT cannot be the same: %d", c.ServerPort)
+	}
+
+	// Validate Redis configuration
+	if err := validatePort(c.Redis.Port, "REDIS_PORT"); err != nil {
+		return err
+	}
+	if c.Redis.DB < 0 || c.Redis.DB > 15 {
+		return fmt.Errorf("REDIS_DB must be between 0-15, got %d", c.Redis.DB)
+	}
+
+	// Validate Kafka configuration
+	if c.Kafka.Brokers == "" {
+		return fmt.Errorf("KAFKA_BROKERS is required")
+	}
+	brokers := c.GetKafkaBrokers()
+	if len(brokers) == 0 {
+		return fmt.Errorf("KAFKA_BROKERS must contain at least one valid broker")
+	}
+
+	// Validate JWT configuration
+	if c.JWT.Secret == "" {
+		return fmt.Errorf("JWT_SECRET is required")
+	}
+	if c.JWT.Secret == "change-me-in-production" && c.Environment == "production" {
+		return fmt.Errorf("JWT_SECRET must be changed in production environment")
+	}
+	if c.JWT.AccessTokenExpire <= 0 {
+		return fmt.Errorf("JWT_ACCESS_TOKEN_EXPIRE must be positive")
+	}
+	if c.JWT.RefreshTokenExpire <= 0 {
+		return fmt.Errorf("JWT_REFRESH_TOKEN_EXPIRE must be positive")
+	}
+	if c.JWT.RefreshTokenExpire <= c.JWT.AccessTokenExpire {
+		return fmt.Errorf("JWT_REFRESH_TOKEN_EXPIRE (%v) must be greater than JWT_ACCESS_TOKEN_EXPIRE (%v)",
+			c.JWT.RefreshTokenExpire, c.JWT.AccessTokenExpire)
+	}
+
+	// Validate environment
+	validEnvs := map[string]bool{
+		"development": true,
+		"staging":     true,
+		"production":  true,
+		"test":        true,
+	}
+	if !validEnvs[c.Environment] {
+		return fmt.Errorf("ENVIRONMENT must be one of: development, staging, production, test; got %s", c.Environment)
+	}
+
+	return nil
+}
+
+// validatePort checks if port is in valid range (1-65535)
+func validatePort(port int, name string) error {
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("%s must be between 1-65535, got %d", name, port)
+	}
 	return nil
 }
 
@@ -148,7 +231,14 @@ func (c *Config) GetRedisAddr() string {
 
 // GetKafkaBrokers returns Kafka brokers as a slice
 func (c *Config) GetKafkaBrokers() []string {
-	return getEnvAsSlice("", strings.Split(c.Kafka.Brokers, ","))
+	parts := strings.Split(c.Kafka.Brokers, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 // IsDevelopment returns true if environment is development
