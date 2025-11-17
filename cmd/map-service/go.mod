@@ -1,3 +1,3 @@
-module github.com/lileon/tabelogov2/cmd/map-service
+module github.com/Leon180/tabelogo-v2/cmd/map-service
 
 go 1.21

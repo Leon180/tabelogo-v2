@@ -35,7 +35,7 @@
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/lileon/tabelogov2.git
+git clone https://github.com/Leon180/tabelogo-v2.git
 cd tabelogov2
 
 # 2. 初始化專案（建立 .env 檔案）
