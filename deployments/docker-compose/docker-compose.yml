@@ -1,0 +1,250 @@
+version: '3.8'
+
+services:
+  # ==================== PostgreSQL 資料庫群組 ====================
+  # 遵循 Database per Service 原則，每個微服務擁有獨立的資料庫實例
+
+  # Auth Service 資料庫
+  # 用途：儲存使用者認證相關資料（users, roles, permissions, refresh_tokens）
+  auth-db:
+    image: postgres:15-alpine  # 使用輕量化的 Alpine Linux 版本
+    container_name: tabelogo-auth-db
+    environment:
+      POSTGRES_DB: auth_db              # 資料庫名稱
+      POSTGRES_USER: postgres           # 資料庫使用者（生產環境應使用強密碼）
+      POSTGRES_PASSWORD: postgres       # 資料庫密碼（生產環境應使用強密碼）
+    ports:
+      - "5432:5432"  # 對外端口:容器內端口，本機可透過 localhost:5432 連線
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data  # 持久化資料，避免容器重啟後資料遺失
+    networks:
+      - tabelogo-network  # 加入專案網路，讓各服務可以互相通訊
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]  # 健康檢查指令
+      interval: 10s   # 每 10 秒檢查一次
+      timeout: 5s     # 超時時間 5 秒
+      retries: 5      # 失敗重試 5 次後標記為 unhealthy
+
+  # Restaurant Service 資料庫
+  # 用途：儲存餐廳主資料（restaurants, cuisines, reviews, ratings）
+  restaurant-db:
+    image: postgres:15-alpine
+    container_name: tabelogo-restaurant-db
+    environment:
+      POSTGRES_DB: restaurant_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"  # 注意：對外端口 5433，避免與 auth-db 衝突
+    volumes:
+      - restaurant-db-data:/var/lib/postgresql/data
+    networks:
+      - tabelogo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Booking Service 資料庫
+  # 用途：儲存預訂資料（bookings, booking_history）
+  booking-db:
+    image: postgres:15-alpine
+    container_name: tabelogo-booking-db
+    environment:
+      POSTGRES_DB: booking_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"  # 對外端口 5434
+    volumes:
+      - booking-db-data:/var/lib/postgresql/data
+    networks:
+      - tabelogo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spider Service 資料庫
+  # 用途：儲存爬蟲任務與結果（crawl_jobs, crawl_results, crawl_logs）
+  spider-db:
+    image: postgres:15-alpine
+    container_name: tabelogo-spider-db
+    environment:
+      POSTGRES_DB: spider_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"  # 對外端口 5435
+    volumes:
+      - spider-db-data:/var/lib/postgresql/data
+    networks:
+      - tabelogo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mail Service 資料庫
+  # 用途：儲存郵件佇列與記錄（email_queue, email_logs, templates）
+  mail-db:
+    image: postgres:15-alpine
+    container_name: tabelogo-mail-db
+    environment:
+      POSTGRES_DB: mail_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"  # 對外端口 5436
+    volumes:
+      - mail-db-data:/var/lib/postgresql/data
+    networks:
+      - tabelogo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== Redis 快取與 Session 儲存 ====================
+  # 使用不同的 DB number 區分各服務（DB 0-4）
+  # DB 0: Auth Service (Session, Token Blacklist)
+  # DB 1: Restaurant Service (Restaurant Cache)
+  # DB 2: Booking Service (Booking Cache)
+  # DB 3: Spider Service (Rate Limiting, Distributed Lock)
+  # DB 4: API Gateway (Rate Limiting, API Cache)
+  redis:
+    image: redis:7-alpine  # 使用 Redis 7 Alpine 版本
+    container_name: tabelogo-redis
+    ports:
+      - "6379:6379"  # Redis 預設端口
+    command: redis-server --appendonly yes  # 啟用 AOF 持久化，確保資料不遺失
+    volumes:
+      - redis-data:/data  # 持久化 Redis 資料
+    networks:
+      - tabelogo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]  # 檢查 Redis 是否回應 PONG
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== Apache Kafka 訊息佇列 ====================
+  # 用於事件驅動架構、服務間非同步通訊
+  # Topics: user-events, restaurant-events, booking-events, spider-results
+
+  # Zookeeper - Kafka 的協調服務
+  # 負責管理 Kafka 叢集的元數據與協調
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0  # Confluent 官方 Zookeeper 映像檔
+    container_name: tabelogo-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181      # 客戶端連線端口
+      ZOOKEEPER_TICK_TIME: 2000        # 基本時間單位（毫秒）
+    ports:
+      - "2181:2181"
+    networks:
+      - tabelogo-network
+
+  # Kafka Broker
+  # 訊息代理，負責訊息的儲存與轉發
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0  # Confluent 官方 Kafka 映像檔
+    container_name: tabelogo-kafka
+    depends_on:
+      - zookeeper  # 確保 Zookeeper 先啟動
+    ports:
+      - "9092:9092"  # 外部連線端口（從 host 連線用）
+      - "9093:9093"  # 保留端口
+    environment:
+      KAFKA_BROKER_ID: 1  # Broker ID（叢集中唯一）
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181  # Zookeeper 連線位址
+      # 監聽器配置：內部服務使用 kafka:29092，外部使用 localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT  # Broker 間通訊使用的監聽器
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1    # offset topic 複製因子（單節點設為 1）
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"      # 允許自動建立 topic
+    networks:
+      - tabelogo-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Kafka UI - Web 介面管理工具
+  # 可視化管理 Kafka Topics、Consumer Groups、Messages 等
+  # 訪問: http://localhost:8080
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: tabelogo-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"  # Web UI 端口
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local                      # 叢集名稱
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092    # Kafka 連線位址（使用內部網路）
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181        # Zookeeper 連線位址
+    networks:
+      - tabelogo-network
+
+  # ==================== 監控與可觀測性 (Monitoring & Observability) ====================
+
+  # Prometheus - 時序資料庫與監控系統
+  # 用於收集各微服務的 Metrics（HTTP 請求、錯誤率、延遲等）
+  # 訪問: http://localhost:9090
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tabelogo-prometheus
+    ports:
+      - "9090:9090"  # Prometheus Web UI
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml  # 掛載設定檔
+      - prometheus-data:/prometheus  # 持久化時序資料
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'  # 指定設定檔路徑
+      - '--storage.tsdb.path=/prometheus'               # 指定資料儲存路徑
+    networks:
+      - tabelogo-network
+
+  # Grafana - 資料視覺化平台
+  # 用於將 Prometheus 收集的 Metrics 視覺化為 Dashboard
+  # 訪問: http://localhost:3000 (預設帳密: admin/admin)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tabelogo-grafana
+    ports:
+      - "3000:3000"  # Grafana Web UI
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin      # 管理員密碼（生產環境應修改）
+      GF_USERS_ALLOW_SIGN_UP: "false"        # 禁止使用者自行註冊
+    volumes:
+      - grafana-data:/var/lib/grafana  # 持久化 Dashboard 與設定
+    networks:
+      - tabelogo-network
+    depends_on:
+      - prometheus  # 確保 Prometheus 先啟動
+
+# ==================== Docker Volumes ====================
+# 持久化儲存，即使容器刪除，資料仍會保留
+volumes:
+  auth-db-data:          # Auth Service 資料庫資料
+  restaurant-db-data:    # Restaurant Service 資料庫資料
+  booking-db-data:       # Booking Service 資料庫資料
+  spider-db-data:        # Spider Service 資料庫資料
+  mail-db-data:          # Mail Service 資料庫資料
+  redis-data:            # Redis 快取資料
+  prometheus-data:       # Prometheus 時序資料
+  grafana-data:          # Grafana Dashboard 與設定
+
+# ==================== Docker Networks ====================
+# 建立專屬網路，讓所有容器可以透過服務名稱互相通訊
+# 例如：服務可以透過 postgres://auth-db:5432 連線到 Auth DB
+networks:
+  tabelogo-network:
+    driver: bridge  # 使用橋接網路模式
