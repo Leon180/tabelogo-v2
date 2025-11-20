@@ -27,6 +27,12 @@ const (
 	ErrCodeRestaurantNotFound ErrorCode = "RESTAURANT_NOT_FOUND"
 	ErrCodeBookingNotFound    ErrorCode = "BOOKING_NOT_FOUND"
 	ErrCodeBookingConflict    ErrorCode = "BOOKING_CONFLICT"
+
+	// Validation errors
+	ErrCodeValidationFailed ErrorCode = "VALIDATION_FAILED"
+
+	// Rate limiting
+	ErrCodeRateLimitExceeded ErrorCode = "RATE_LIMIT_EXCEEDED"
 )
 
 // AppError represents an application error
@@ -85,7 +91,7 @@ func (e *AppError) WithHTTPStatus(status int) *AppError {
 // getHTTPStatus returns the HTTP status code for an error code
 func getHTTPStatus(code ErrorCode) int {
 	switch code {
-	case ErrCodeInvalidRequest:
+	case ErrCodeInvalidRequest, ErrCodeValidationFailed:
 		return http.StatusBadRequest
 	case ErrCodeUnauthorized, ErrCodeInvalidCredentials, ErrCodeTokenExpired, ErrCodeTokenInvalid:
 		return http.StatusUnauthorized
@@ -95,6 +101,8 @@ func getHTTPStatus(code ErrorCode) int {
 		return http.StatusNotFound
 	case ErrCodeConflict, ErrCodeBookingConflict:
 		return http.StatusConflict
+	case ErrCodeRateLimitExceeded:
+		return http.StatusTooManyRequests
 	default:
 		return http.StatusInternalServerError
 	}

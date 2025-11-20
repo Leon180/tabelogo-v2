@@ -377,3 +377,70 @@ func main() {
     }
 }
 ```
+
+---
+
+## 📦 Package: migrations
+
+資料庫 migration 版本控制系統。
+
+### 快速使用
+
+```go
+import "github.com/Leon180/tabelogo-v2/pkg/migrations"
+
+mgr, err := migrations.NewManager(migrations.Config{
+    DB:             db,
+    Logger:         logger,
+    MigrationsPath: "file://migrations/auth",
+    ServiceName:    "auth",
+})
+defer mgr.Close()
+
+// 執行 migrations
+err = mgr.Up(context.Background())
+```
+
+### 詳細文檔
+
+- [完整使用手冊](migrations/README.md)
+- [Import 指南](migrations/IMPORT_GUIDE.md)
+
+---
+
+## Module 管理說明
+
+### 為什麼統一在 pkg/ 層級管理 go.mod?
+
+所有 `pkg/` 下的子目錄都屬於同一個 module: `github.com/Leon180/tabelogo-v2/pkg`
+
+**優點**:
+1. ✅ 簡化依賴管理 - 只需維護一個 go.mod
+2. ✅ 避免循環依賴 - pkg 內的套件可以互相引用
+3. ✅ 版本統一 - 所有套件使用相同版本的依賴
+4. ✅ 符合 Go 慣例 - 官方推薦做法
+
+### Import 路徑
+
+```go
+// ✅ 正確
+import "github.com/Leon180/tabelogo-v2/pkg/migrations"
+import "github.com/Leon180/tabelogo-v2/pkg/logger"
+
+// ❌ 錯誤
+import "pkg/migrations"
+import "../logger"
+```
+
+### 依賴管理
+
+所有依賴在 `pkg/go.mod` 中統一管理:
+
+```bash
+# 添加新依賴
+cd pkg
+go get github.com/new/package@version
+
+# 清理依賴
+go mod tidy
+```
