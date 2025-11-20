@@ -50,16 +50,22 @@
 ### 4.1 Database per Service 原則
 遵循微服務架構最佳實踐，**每個微服務擁有獨立的資料庫**，實現真正的服務解耦。
 
-#### 資料庫分配策略
+#### 資料庫分配策略 ✅ **已實現 (2025-11-20)**
 
-| 服務 | 資料庫名稱 | 主要資料表 | 說明 |
-|------|-----------|-----------|------|
-| **Auth Service** | `auth_db` | users, roles, permissions, refresh_tokens | 使用者認證資料 |
-| **Restaurant Service** | `restaurant_db` | restaurants, cuisines, reviews, ratings | 餐廳主資料 |
-| **Booking Service** | `booking_db` | bookings, booking_history | 預訂資料 |
-| **Spider Service** | `spider_db` | crawl_jobs, crawl_results, crawl_logs | 爬蟲任務與結果 |
-| **Mail Service** | `mail_db` | email_queue, email_logs, templates | 郵件佇列與記錄 |
-| **Map Service** | 無獨立 DB | - | 僅作為 Google Maps API 的代理層 |
+| 服務 | 資料庫名稱 | 端口 | 主要資料表 | 說明 | 狀態 |
+|------|-----------|------|-----------|------|------|
+| **Auth Service** | `auth_db` | **15432** ⚠️ | users, refresh_tokens | 使用者認證資料 | ✅ |
+| **Restaurant Service** | `restaurant_db` | 5433 | restaurants, user_favorites | 餐廳主資料（來自外部）、使用者收藏 | ✅ |
+| **Booking Service** | `booking_db` | 5434 | bookings, booking_history | 預訂資料（Event Sourcing） | ✅ |
+| **Spider Service** | `spider_db` | 5435 | crawl_jobs, crawl_results | 爬蟲任務與結果（Google/Tabelog/IG） | ✅ |
+| **Mail Service** | `mail_db` | 5436 | email_queue, email_logs | 郵件佇列與追蹤記錄 | ✅ |
+| **Map Service** | 無獨立 DB | - | - | 僅作為 Google Maps API 的代理層 | - |
+
+**設計調整說明**：
+- ❌ 移除 `reviews` 表 - 評論來自外部資料源（Google/Tabelog），不需本地儲存
+- ✅ 新增 `user_favorites` 表 - 使用者僅能收藏、查詢餐廳，不能編輯資料
+- ✅ `bookings` 支援外部 API 同步 - 增加 `external_booking_id`, `external_service`, `last_synced_at`
+- ✅ 完整 Event Sourcing - `booking_history` 記錄所有狀態變更
 
 #### 獨立 Redis 配置
 
@@ -149,24 +155,57 @@ Booking Service (寫)    → Kafka (booking-events)    → Query Service → Ela
   - Covering index：避免回表查詢
 
 #### 4.4.2 Migration 管理
+
+✅ **已完成 (2025-11-20)**
+
 ```bash
 # 每個服務獨立的 migration 目錄
 migrations/
-├── auth/
-│   ├── 20250101_create_users_table.up.sql
-│   └── 20250101_create_users_table.down.sql
-├── restaurant/
-│   ├── 20250102_create_restaurants_table.up.sql
-│   └── 20250102_create_restaurants_table.down.sql
-└── booking/
-    ├── 20250103_create_bookings_table.up.sql
-    └── 20250103_create_bookings_table.down.sql
+├── auth/                                      # ✅ 已完成
+│   ├── 000001_create_users_table.up.sql
+│   ├── 000001_create_users_table.down.sql
+│   ├── 000002_create_refresh_tokens_table.up.sql
+│   └── 000002_create_refresh_tokens_table.down.sql
+├── restaurant/                                # ✅ 已完成
+│   ├── 000001_create_restaurants_table.up.sql
+│   ├── 000001_create_restaurants_table.down.sql
+│   ├── 000002_create_user_favorites_table.up.sql
+│   └── 000002_create_user_favorites_table.down.sql
+├── booking/                                   # ✅ 已完成
+│   ├── 000001_create_bookings_table.up.sql
+│   ├── 000001_create_bookings_table.down.sql
+│   ├── 000002_create_booking_history_table.up.sql
+│   └── 000002_create_booking_history_table.down.sql
+├── spider/                                    # ✅ 已完成
+│   ├── 000001_create_crawl_jobs_table.up.sql
+│   ├── 000001_create_crawl_jobs_table.down.sql
+│   ├── 000002_create_crawl_results_table.up.sql
+│   └── 000002_create_crawl_results_table.down.sql
+├── mail/                                      # ✅ 已完成
+│   ├── 000001_create_email_queue_table.up.sql
+│   ├── 000001_create_email_queue_table.down.sql
+│   ├── 000002_create_email_logs_table.up.sql
+│   └── 000002_create_email_logs_table.down.sql
+├── MIGRATIONS_SUMMARY.md                     # 完整文檔
+└── MIGRATION_EXECUTION_REPORT.md             # 執行報告
 ```
 
-工具：`golang-migrate/migrate`
+**工具**：`golang-migrate/migrate`
+
+**執行 Migrations**：
 ```bash
-migrate -path migrations/auth -database "postgres://..." up
+# 使用自動化腳本（推薦）
+./scripts/run_migrations.sh
+
+# 或手動執行
+migrate -path migrations/auth -database "postgresql://postgres:postgres@localhost:15432/auth_db?sslmode=disable" up
+migrate -path migrations/restaurant -database "postgresql://postgres:postgres@localhost:5433/restaurant_db?sslmode=disable" up
+migrate -path migrations/booking -database "postgresql://postgres:postgres@localhost:5434/booking_db?sslmode=disable" up
+migrate -path migrations/spider -database "postgresql://postgres:postgres@localhost:5435/spider_db?sslmode=disable" up
+migrate -path migrations/mail -database "postgresql://postgres:postgres@localhost:5436/mail_db?sslmode=disable" up
 ```
+
+**重要提醒**：Auth DB 端口為 **15432**（非標準 5432）
 
 #### 4.4.3 讀寫分離 (可選)
 針對讀取量大的服務（如 Restaurant Service）：
@@ -543,9 +582,14 @@ if lock != nil {
 
 ## 16. 資料庫 Schema 範例（按服務分離）
 
-### 16.1 Auth Service Database (`auth_db`)
+### 16.1 Auth Service Database (`auth_db`) ✅
 
-#### Users Table
+**實現狀態**：已完成 (2025-11-20)
+**Migration 版本**：v2
+**資料表**：users, refresh_tokens
+**連接端口**：15432 ⚠️
+
+#### Users Table ✅
 ```sql
 -- Database: auth_db
 CREATE TABLE users (
@@ -581,9 +625,13 @@ CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
 ```
 
-### 16.2 Restaurant Service Database (`restaurant_db`)
+### 16.2 Restaurant Service Database (`restaurant_db`) ✅
 
-#### Restaurants Table
+**實現狀態**：已完成 (2025-11-20)
+**Migration 版本**：v2
+**資料表**：restaurants, user_favorites
+
+#### Restaurants Table ✅
 ```sql
 -- Database: restaurant_db
 CREATE TABLE restaurants (
@@ -615,28 +663,41 @@ CREATE INDEX idx_restaurants_cuisine ON restaurants(cuisine_type) WHERE deleted_
 CREATE INDEX idx_restaurants_rating ON restaurants(rating DESC) WHERE deleted_at IS NULL;
 ```
 
-#### Reviews Table
+#### User Favorites Table ✅ **新增 (2025-11-20)**
 ```sql
 -- Database: restaurant_db
-CREATE TABLE reviews (
+-- 使用者收藏餐廳功能（取代 reviews 表）
+CREATE TABLE user_favorites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    restaurant_id UUID NOT NULL REFERENCES restaurants(id),
     user_id UUID NOT NULL,  -- 來自 Auth Service，不使用外鍵
-    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    comment TEXT,
+    restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+    notes TEXT,  -- 使用者私人筆記
+    tags VARCHAR(255)[],  -- 使用者自定義標籤
+    visit_count INT DEFAULT 0,  -- 造訪次數
+    last_visited_at TIMESTAMP,  -- 最後造訪時間
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     deleted_at TIMESTAMP NULL
 );
 
-CREATE INDEX idx_reviews_restaurant_id ON reviews(restaurant_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_reviews_user_id ON reviews(user_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_reviews_created_at ON reviews(created_at DESC);
+CREATE INDEX idx_user_favorites_user_id ON user_favorites(user_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_user_favorites_restaurant_id ON user_favorites(restaurant_id) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_user_favorites_unique ON user_favorites(user_id, restaurant_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_user_favorites_tags ON user_favorites USING GIN(tags);
 ```
 
-### 16.3 Booking Service Database (`booking_db`)
+**設計說明**：
+- ❌ **移除 reviews 表** - 評論、評分等資料完全來自外部（Google Maps, Tabelog, Instagram）
+- ✅ **新增 user_favorites 表** - 使用者只能收藏餐廳、添加私人筆記、標籤
+- 使用者**無法編輯餐廳資料**，僅能查詢和收藏
 
-#### Bookings Table
+### 16.3 Booking Service Database (`booking_db`) ✅
+
+**實現狀態**：已完成 (2025-11-20)
+**Migration 版本**：v2
+**資料表**：bookings, booking_history
+
+#### Bookings Table ✅
 ```sql
 -- Database: booking_db
 CREATE TABLE bookings (
@@ -647,6 +708,8 @@ CREATE TABLE bookings (
     party_size INT NOT NULL CHECK (party_size > 0),
     status VARCHAR(20) DEFAULT 'pending', -- pending, confirmed, cancelled, completed
     external_booking_id VARCHAR(255),  -- OpenTable 的預訂 ID
+    external_service VARCHAR(50),  -- 外部服務名稱 (opentable, tabelog)
+    last_synced_at TIMESTAMP,  -- 最後同步時間
     notes TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -674,14 +737,18 @@ CREATE INDEX idx_booking_history_booking_id ON booking_history(booking_id);
 CREATE INDEX idx_booking_history_created_at ON booking_history(created_at DESC);
 ```
 
-### 16.4 Spider Service Database (`spider_db`)
+### 16.4 Spider Service Database (`spider_db`) ✅
 
-#### Crawl Jobs Table
+**實現狀態**：已完成 (2025-11-20)
+**Migration 版本**：v2
+**資料表**：crawl_jobs, crawl_results
+
+#### Crawl Jobs Table ✅
 ```sql
 -- Database: spider_db
 CREATE TABLE crawl_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source VARCHAR(50) NOT NULL,  -- 'tabelog', 'google', etc.
+    source VARCHAR(50) NOT NULL,  -- 'tabelog', 'google_maps', 'instagram', etc.
     region VARCHAR(100),
     status VARCHAR(20) DEFAULT 'pending',  -- pending, running, completed, failed
     total_pages INT,
@@ -715,9 +782,13 @@ CREATE UNIQUE INDEX idx_crawl_results_source_external_id
     ON crawl_results(source, external_id);
 ```
 
-### 16.5 Mail Service Database (`mail_db`)
+### 16.5 Mail Service Database (`mail_db`) ✅
 
-#### Email Queue Table
+**實現狀態**：已完成 (2025-11-20)
+**Migration 版本**：v2
+**資料表**：email_queue, email_logs
+
+#### Email Queue Table ✅
 ```sql
 -- Database: mail_db
 CREATE TABLE email_queue (
@@ -1015,11 +1086,23 @@ internal/restaurant/
 - [x] Docker、docker-compose 設定
 - [x] PostgreSQL、Redis、Kafka 環境建置
 - [x] 開發工具設定（Makefile、.env、.gitignore）
-- [ ] 基礎 Migrations 建立（每個服務的第一個 migration）
-- [ ] 共用套件基礎實作（logger、config、errors）
+- [x] **基礎 Migrations 建立（每個服務的第一個 migration）** ✅ **2025-11-20 完成**
+  - [x] Auth Service: users, refresh_tokens
+  - [x] Restaurant Service: restaurants, user_favorites
+  - [x] Booking Service: bookings, booking_history
+  - [x] Spider Service: crawl_jobs, crawl_results
+  - [x] Mail Service: email_queue, email_logs
+  - [x] 共用 trigger functions (update_updated_at_column)
+  - [x] 完整索引策略 (B-tree, GIN, Partial, Composite)
+  - [x] Migration 文檔 (MIGRATIONS_SUMMARY.md, MIGRATION_EXECUTION_REPORT.md)
+- [x] **共用套件完整實作** ✅ **2025-11-20 完成**
+  - [x] pkg/logger - 統一日誌套件 (Zap + Context 支援)
+  - [x] pkg/config - 配置載入與管理
+  - [x] pkg/errors - 錯誤處理 (HTTP + gRPC)
+  - [x] pkg/middleware - HTTP 中間件 (7 個完整中間件)
+  - [x] 完整單元測試與文檔
 
 ### Phase 2: 核心服務開發 (Week 3-6)
-- [ ] 共用套件完整實作（pkg/logger、config、errors、middleware）
 - [ ] Auth Service 開發
   - [ ] Domain Layer: User Aggregate
   - [ ] gRPC Server 實作
@@ -1240,6 +1323,198 @@ Spider Service → Kafka (spider-results) → Restaurant Service (更新餐廳�
 - [Prometheus Best Practices](https://prometheus.io/docs/practices/)
 - [OpenTelemetry Go](https://opentelemetry.io/docs/instrumentation/go/)
 - [Grafana Documentation](https://grafana.com/docs/)
+
+---
+
+## 22. 更新記錄 (Change Log)
+
+### 2025-11-20 - Migration 實現完成 ✅
+
+**完成項目：Phase 1 - 基礎 Migrations 建立**
+
+#### 實現內容
+- ✅ 建立 5 個微服務的資料庫 migrations（10 個資料表）
+  - Auth Service: `users`, `refresh_tokens`
+  - Restaurant Service: `restaurants`, `user_favorites`
+  - Booking Service: `bookings`, `booking_history`
+  - Spider Service: `crawl_jobs`, `crawl_results`
+  - Mail Service: `email_queue`, `email_logs`
+
+#### 設計調整
+1. **Restaurant Service**
+   - ❌ 移除 `reviews` 表 - 評論資料完全來自外部（Google Maps, Tabelog, Instagram）
+   - ✅ 新增 `user_favorites` 表 - 使用者僅能收藏、查詢，無法編輯餐廳資料
+
+2. **Booking Service**
+   - ✅ 新增外部 API 同步支援
+   - 新增欄位：`external_service`, `last_synced_at`
+   - 支援與 OpenTable/Tabelog 等外部服務同步
+
+3. **索引優化**
+   - 移除 WHERE 子句中的 `NOW()` 函數（PostgreSQL immutability 限制）
+   - 改為在應用層過濾或調整索引策略
+
+#### 技術細節
+- 所有表格使用 UUID v4 主鍵
+- 實現軟刪除（`deleted_at`）
+- 自動 `updated_at` 觸發器
+- 完整索引策略（B-tree, GIN, Partial, Composite）
+- Event Sourcing（`booking_history`）
+
+#### 文檔
+- [migrations/MIGRATIONS_SUMMARY.md](migrations/MIGRATIONS_SUMMARY.md) - 完整設計文檔
+- [migrations/MIGRATION_EXECUTION_REPORT.md](migrations/MIGRATION_EXECUTION_REPORT.md) - 執行報告
+- [scripts/run_migrations.sh](scripts/run_migrations.sh) - 自動化執行腳本
+
+#### 環境配置
+- Auth DB: Port **15432** ⚠️（非標準 5432）
+- Restaurant DB: Port 5433
+- Booking DB: Port 5434
+- Spider DB: Port 5435
+- Mail DB: Port 5436
+
+### 2025-11-20 - Middleware 套件完成 ✅
+
+**完成項目：Phase 1 - HTTP 中間件完整實作**
+
+#### 實現內容
+- ✅ **認證中間件 (Authentication)**
+  - JWT Token 驗證
+  - Bearer Token 解析
+  - 用戶角色檢查 (RBAC)
+  - 跳過路徑配置
+  - Context 中的用戶資訊提取
+
+- ✅ **速率限制中間件 (Rate Limiting)**
+  - Redis 分散式速率限制（生產環境）
+  - 記憶體內速率限制（開發環境）
+  - 滑動視窗演算法
+  - 按 IP 或用戶 ID 限流
+  - 自動設定速率限制標頭
+
+- ✅ **請求 ID 中間件 (Request ID)**
+  - 自動生成 UUID
+  - 支援現有 Request ID
+  - Context 中的 Request ID 管理
+  - 回應標頭設定
+
+- ✅ **日誌中間件 (Logger)**
+  - Uber Zap 結構化日誌
+  - 請求/回應詳細資訊
+  - 延遲時間追蹤
+  - 錯誤日誌
+
+- ✅ **錯誤處理中間件 (Error Handler)**
+  - AppError 類型識別
+  - HTTP 狀態碼自動映射
+  - 統一錯誤回應格式
+  - 詳細錯誤資訊
+
+- ✅ **恢復中間件 (Recovery)**
+  - Panic 捕獲
+  - 錯誤日誌記錄
+  - 優雅的錯誤回應
+
+- ✅ **CORS 中間件 (CORS)**
+  - 跨來源資源共享配置
+  - OPTIONS 請求處理
+  - 自定義標頭和方法
+
+#### 新增依賴
+```
+github.com/gin-gonic/gin v1.11.0
+github.com/golang-jwt/jwt/v5 v5.3.0
+github.com/redis/go-redis/v9 v9.17.0
+github.com/google/uuid v1.6.0
+github.com/stretchr/testify v1.11.1
+```
+
+#### 測試與文檔
+- ✅ 所有中間件包含完整單元測試
+- ✅ 測試案例涵蓋正常和異常情況
+- ✅ 完整使用文檔 (MIDDLEWARE.md)
+- ✅ 程式碼範例與最佳實踐
+- ✅ 效能考量與安全性建議
+
+#### 技術細節
+- JWT 認證支援自定義 Claims
+- 速率限制使用 Redis 滑動視窗演算法
+- Request ID 使用 UUID v4
+- 日誌使用 Zap 高效能結構化日誌
+- 錯誤處理與 pkg/errors 完美整合
+
+#### 文檔
+- [pkg/middleware/MIDDLEWARE.md](pkg/middleware/MIDDLEWARE.md) - 完整使用文檔
+- 包含 7 個中間件的詳細說明
+- 完整的使用範例和最佳實踐
+- 中間件鏈配置範例
+- 效能優化建議
+
+#### 下一步
+- [ ] 開始 Phase 2：核心服務開發
+  - Auth Service (JWT 簽發、使用者管理)
+  - Restaurant Service (餐廳 CRUD、搜尋)
+  - API Gateway (路由、gRPC 轉 HTTP)
+
+---
+
+### 2025-11-20 - 共用套件實現完成 ✅
+
+**完成項目：Phase 1 - 共用套件基礎實作**
+
+#### 實現內容
+- ✅ `pkg/logger` - 統一日誌套件
+  - 基於 `go.uber.org/zap` 高效能日誌
+  - 支援多個日誌等級 (debug, info, warn, error, fatal)
+  - Context 支援（日誌追蹤）
+  - Uber FX 依賴注入整合
+
+- ✅ `pkg/config` - 配置載入與管理
+  - 從環境變數載入配置
+  - 支援環境變數前綴（多服務配置）
+  - 完整的配置驗證
+  - 型別安全的配置存取
+  - Uber FX 依賴注入整合
+
+- ✅ `pkg/errors` - 統一錯誤處理
+  - 統一的錯誤碼系統
+  - HTTP 狀態碼自動映射
+  - gRPC 錯誤支援（ToGRPCError, FromGRPCError）
+  - 錯誤包裝與追蹤
+  - 詳細資訊附加
+
+#### 新增功能
+1. **logger 套件增強**
+   - ✅ Context 支援 (`WithContext`, `FromContext`, `WithFields`)
+   - ✅ 線程安全的 logger 管理
+   - ✅ 自動 fallback 機制
+
+2. **errors 套件增強**
+   - ✅ gRPC 錯誤轉換 (`ToGRPCError`, `FromGRPCError`)
+   - ✅ 錯誤碼與 gRPC codes 映射
+   - ✅ HTTP 狀態碼自動推導
+
+3. **測試與文檔**
+   - ✅ 所有套件包含完整單元測試
+   - ✅ 測試覆蓋率 > 80%
+   - ✅ 完整使用文檔 (SHARED_PACKAGES.md)
+   - ✅ 程式碼範例與最佳實踐
+
+#### 技術細節
+- 使用 Uber Zap（比 logrus 快 4-10x）
+- 結構化日誌 (JSON 格式)
+- 環境變數配置（遵循 12-Factor App）
+- 錯誤追蹤與包裝（保留 stack trace）
+
+#### 文檔
+- [pkg/SHARED_PACKAGES.md](pkg/SHARED_PACKAGES.md) - 完整使用文檔
+- [pkg/logger/logger_test.go](pkg/logger/logger_test.go) - 單元測試
+- [pkg/config/config_test.go](pkg/config/config_test.go) - 單元測試
+- [pkg/errors/errors_test.go](pkg/errors/errors_test.go) - 單元測試
+
+#### 下一步
+- [ ] pkg/middleware 實作（認證、日誌、錯誤處理 middleware）
+- [ ] 開始 Phase 2：核心服務開發
 
 ---
 

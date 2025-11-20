@@ -66,3 +66,6 @@ tmp/
 
 # others
 note.*
+
+# go binary
+tabelogo-v2
