@@ -7,18 +7,31 @@ SERVICES = auth-service restaurant-service booking-service spider-service mail-s
 ## help: 顯示此幫助訊息
 help:
 	@echo "可用指令："
-	@echo "  make init        - 初始化專案（建立 .env、安裝依賴）"
-	@echo "  make up          - 啟動所有 Docker 容器"
-	@echo "  make down        - 停止並移除所有容器"
-	@echo "  make restart     - 重啟所有容器"
-	@echo "  make logs        - 查看所有容器日誌"
-	@echo "  make ps          - 查看容器狀態"
-	@echo "  make clean       - 清理所有容器和 volumes"
-	@echo "  make build       - 建置所有微服務"
-	@echo "  make test        - 執行所有測試"
-	@echo "  make lint        - 執行程式碼檢查"
-	@echo "  make proto       - 生成 Protocol Buffers 程式碼"
-	@echo "  make migrate     - 執行資料庫 migrations"
+	@echo "  make init            - 初始化專案（建立 .env、安裝依賴）"
+	@echo "  make up              - 啟動所有 Docker 容器 (完整系統)"
+	@echo "  make down            - 停止並移除所有容器 (完整系統)"
+	@echo "  make restart         - 重啟所有容器"
+	@echo "  make logs            - 查看所有容器日誌"
+	@echo "  make ps              - 查看容器狀態"
+	@echo "  make clean           - 清理所有容器和 volumes"
+	@echo "  make build           - 建置所有微服務"
+	@echo "  make test            - 執行所有測試"
+	@echo "  make lint            - 執行程式碼檢查"
+	@echo "  make proto           - 生成 Protocol Buffers 程式碼"
+	@echo "  make migrate-up      - 執行資料庫 migrations"
+	@echo "  make migrate-down    - 回滾資料庫 migrations"
+	@echo ""
+	@echo "Auth Service 指令 (本地開發):"
+	@echo "  make auth-up         - 啟動 Auth Service (Port 18080/19090)"
+	@echo "  make auth-down       - 停止 Auth Service"
+	@echo "  make auth-restart    - 重啟 Auth Service"
+	@echo "  make auth-logs       - 查看 Auth Service 日誌"
+	@echo "  make auth-ps         - 查看 Auth Service 狀態"
+	@echo "  make auth-clean      - 清理 Auth Service 容器和資料"
+	@echo "  make auth-shell      - 進入 Auth Service 容器"
+	@echo "  make auth-db         - 連接到 Auth Service PostgreSQL"
+	@echo "  make auth-redis      - 連接到 Auth Service Redis"
+	@echo "  make auth-build      - 建置 Auth Service Docker Image"
 
 ## init: 初始化專案
 init:
@@ -29,7 +42,7 @@ init:
 ## up: 啟動所有 Docker 容器
 up:
 	@echo "=> 啟動所有微服務..."
-	docker-compose up -d
+	$(DOCKER_COMPOSE) up -d
 	@echo "=> 所有服務已啟動"
 	@echo "=> Auth Service HTTP: http://localhost:8080"
 	@echo "=> Auth Service gRPC: localhost:9090"
@@ -39,7 +52,7 @@ up:
 ## down: 停止並移除所有容器
 down:
 	@echo "=> 停止所有容器..."
-	docker-compose down
+	$(DOCKER_COMPOSE) down
 
 ## restart: 重啟所有容器
 restart: down up
