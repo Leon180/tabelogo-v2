@@ -1,0 +1,16 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "package-name": "tabelogo-v2",
+      "extra-files": [
+        "architecture.md"
+      ]
+    },
+    "pkg": {
+      "release-type": "go",
+      "package-name": "tabelogo-v2/pkg"
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}
