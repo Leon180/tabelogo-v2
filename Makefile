@@ -160,7 +160,7 @@ auth-build:
 ## auth-up: 啟動 Auth Service 及其依賴 (PostgreSQL, Redis)
 auth-up:
 	@echo "=> 啟動 Auth Service..."
-	@cd cmd/auth-service && docker-compose up -d
+	@docker-compose -f deployments/docker-compose/auth-service.yml up -d
 	@echo "=> Auth Service 已啟動"
 	@echo "=> HTTP API: http://localhost:18080"
 	@echo "=> gRPC API: localhost:19090"
@@ -169,7 +169,7 @@ auth-up:
 ## auth-down: 停止 Auth Service
 auth-down:
 	@echo "=> 停止 Auth Service..."
-	@cd cmd/auth-service && docker-compose down
+	@docker-compose -f deployments/docker-compose/auth-service.yml down
 	@echo "=> Auth Service 已停止"
 
 ## auth-restart: 重啟 Auth Service
@@ -177,16 +177,16 @@ auth-restart: auth-down auth-up
 
 ## auth-logs: 查看 Auth Service 日誌
 auth-logs:
-	@cd cmd/auth-service && docker-compose logs -f auth-service
+	@docker-compose -f deployments/docker-compose/auth-service.yml logs -f auth-service
 
 ## auth-ps: 查看 Auth Service 狀態
 auth-ps:
-	@cd cmd/auth-service && docker-compose ps
+	@docker-compose -f deployments/docker-compose/auth-service.yml ps
 
 ## auth-clean: 清理 Auth Service 容器和資料
 auth-clean:
 	@echo "=> 清理 Auth Service..."
-	@cd cmd/auth-service && docker-compose down -v
+	@docker-compose -f deployments/docker-compose/auth-service.yml down -v
 	@echo "=> Auth Service 已清理"
 
 ## auth-shell: 進入 Auth Service 容器
@@ -195,8 +195,8 @@ auth-shell:
 
 ## auth-db: 連接到 Auth Service PostgreSQL
 auth-db:
-	@docker exec -it tabelogo-postgres-auth psql -U postgres -d auth_db
+	@docker exec -it tabelogo-postgres-auth-dev psql -U postgres -d auth_db
 
 ## auth-redis: 連接到 Auth Service Redis
 auth-redis:
-	@docker exec -it tabelogo-redis-auth redis-cli
+	@docker exec -it tabelogo-redis-auth-dev redis-cli
