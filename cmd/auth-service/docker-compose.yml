@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for Auth Service (Local Development)
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: tabelogo-postgres-auth-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "15432:5432" # Different port for local dev
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tabelogo-network
+
+  # Redis for Auth Service (Local Development)
+  redis-auth:
+    image: redis:7-alpine
+    container_name: tabelogo-redis-auth-dev
+    ports:
+      - "16379:6379" # Different port for local dev
+    volumes:
+      - redis-auth-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tabelogo-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: cmd/auth-service/Dockerfile
+    container_name: tabelogo-auth-service
+    env_file:
+      - .env.example
+    environment:
+      DB_HOST: postgres-auth
+      REDIS_HOST: redis-auth
+    ports:
+      - "18080:8080" # HTTP (different port for local dev)
+      - "19090:9090" # gRPC (different port for local dev)
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis-auth:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - tabelogo-network
+
+volumes:
+  postgres-auth-data:
+    driver: local
+  redis-auth-data:
+    driver: local
+
+networks:
+  tabelogo-network:
+    driver: bridge

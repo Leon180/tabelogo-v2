@@ -1,0 +1,257 @@
+version: '3.8'
+
+# Tabelogo v2 - Microservices Architecture
+# This compose file orchestrates all services and shared infrastructure
+
+services:
+  # ==================== Infrastructure Services ====================
+
+  # PostgreSQL - Auth Service
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: tabelogo-postgres-auth
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tabelogo-network
+
+  # PostgreSQL - Restaurant Service
+  postgres-restaurant:
+    image: postgres:15-alpine
+    container_name: tabelogo-postgres-restaurant
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: restaurant_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-restaurant-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tabelogo-network
+
+  # PostgreSQL - Booking Service
+  postgres-booking:
+    image: postgres:15-alpine
+    container_name: tabelogo-postgres-booking
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: booking_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-booking-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tabelogo-network
+
+  # Redis - Shared Cache
+  redis:
+    image: redis:7-alpine
+    container_name: tabelogo-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tabelogo-network
+
+  # Kafka
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: tabelogo-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - tabelogo-network
+
+  # Zookeeper (for Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: tabelogo-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - tabelogo-network
+
+  # ==================== Microservices ====================
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: cmd/auth-service/Dockerfile
+    container_name: tabelogo-auth-service
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: info
+      SERVER_PORT: 8080
+      GRPC_PORT: 9090
+      DB_HOST: postgres-auth
+      DB_PORT: 5432
+      DB_NAME: auth_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: change-me-in-production-must-be-at-least-32-characters-long
+      JWT_ACCESS_TOKEN_EXPIRE: 15m
+      JWT_REFRESH_TOKEN_EXPIRE: 168h
+      KAFKA_BROKERS: kafka:9092
+    ports:
+      - "8080:8080" # HTTP
+      - "9090:9090" # gRPC
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - tabelogo-network
+
+  # Restaurant Service (Placeholder - to be implemented)
+  # restaurant-service:
+  #   build:
+  #     context: .
+  #     dockerfile: cmd/restaurant-service/Dockerfile
+  #   container_name: tabelogo-restaurant-service
+  #   ports:
+  #     - "8081:8080"
+  #     - "9091:9090"
+  #   depends_on:
+  #     - postgres-restaurant
+  #     - redis
+  #     - kafka
+  #   networks:
+  #     - tabelogo-network
+
+  # Booking Service (Placeholder - to be implemented)
+  # booking-service:
+  #   build:
+  #     context: .
+  #     dockerfile: cmd/booking-service/Dockerfile
+  #   container_name: tabelogo-booking-service
+  #   ports:
+  #     - "8082:8080"
+  #     - "9092:9090"
+  #   depends_on:
+  #     - postgres-booking
+  #     - redis
+  #     - kafka
+  #   networks:
+  #     - tabelogo-network
+
+  # API Gateway (Placeholder - to be implemented)
+  # api-gateway:
+  #   build:
+  #     context: .
+  #     dockerfile: cmd/api-gateway/Dockerfile
+  #   container_name: tabelogo-api-gateway
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - auth-service
+  #     - restaurant-service
+  #     - booking-service
+  #   networks:
+  #     - tabelogo-network
+
+  # ==================== Monitoring & Tools ====================
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tabelogo-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - tabelogo-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tabelogo-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - tabelogo-network
+
+volumes:
+  postgres-auth-data:
+    driver: local
+  postgres-restaurant-data:
+    driver: local
+  postgres-booking-data:
+    driver: local
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  tabelogo-network:
+    driver: bridge

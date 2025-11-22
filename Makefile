@@ -28,17 +28,18 @@ init:
 
 ## up: 啟動所有 Docker 容器
 up:
-	@echo "=> 啟動 Docker 容器..."
-	$(DOCKER_COMPOSE) up -d
-	@echo "=> 所有容器已啟動"
-	@echo "=> Kafka UI: http://localhost:8080"
+	@echo "=> 啟動所有微服務..."
+	docker-compose up -d
+	@echo "=> 所有服務已啟動"
+	@echo "=> Auth Service HTTP: http://localhost:8080"
+	@echo "=> Auth Service gRPC: localhost:9090"
 	@echo "=> Grafana: http://localhost:3000 (admin/admin)"
 	@echo "=> Prometheus: http://localhost:9090"
 
 ## down: 停止並移除所有容器
 down:
 	@echo "=> 停止所有容器..."
-	$(DOCKER_COMPOSE) down
+	docker-compose down
 
 ## restart: 重啟所有容器
 restart: down up
@@ -119,3 +120,83 @@ migrate-down:
 ## dev: 啟動開發環境
 dev: init up
 	@echo "=> 開發環境已啟動！"
+
+## test-unit: 執行單元測試
+test-unit:
+	@echo "=> 執行單元測試..."
+	@go test -v -short ./internal/auth/application/...
+	@echo "=> 單元測試完成"
+
+## test-integration: 執行整合測試
+test-integration:
+	@echo "=> 啟動測試環境..."
+	@docker-compose -f docker-compose.test.yml up -d
+	@echo "=> 等待服務就緒..."
+	@sleep 5
+	@echo "=> 執行整合測試..."
+	@TEST_DB_HOST=localhost TEST_DB_PORT=5433 TEST_REDIS_ADDR=localhost:6380 \
+		go test -v ./tests/integration/...
+	@echo "=> 關閉測試環境..."
+	@docker-compose -f docker-compose.test.yml down
+	@echo "=> 整合測試完成"
+
+## test-all: 執行所有測試
+test-all: test-unit test-integration
+	@echo "=> 所有測試完成"
+
+## test-coverage: 執行測試並生成覆蓋率報告
+test-coverage:
+	@echo "=> 生成測試覆蓋率報告..."
+	@go test -v -coverprofile=coverage.out ./internal/auth/...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "=> 覆蓋率報告已生成: coverage.html"
+
+## auth-build: 建置 Auth Service Docker Image
+auth-build:
+	@echo "=> 建置 Auth Service Docker Image..."
+	@docker build -f cmd/auth-service/Dockerfile -t tabelogo-auth-service:latest .
+	@echo "=> Auth Service Image 建置完成"
+
+## auth-up: 啟動 Auth Service 及其依賴 (PostgreSQL, Redis)
+auth-up:
+	@echo "=> 啟動 Auth Service..."
+	@cd cmd/auth-service && docker-compose up -d
+	@echo "=> Auth Service 已啟動"
+	@echo "=> HTTP API: http://localhost:18080"
+	@echo "=> gRPC API: localhost:19090"
+	@echo "=> 查看日誌: make auth-logs"
+
+## auth-down: 停止 Auth Service
+auth-down:
+	@echo "=> 停止 Auth Service..."
+	@cd cmd/auth-service && docker-compose down
+	@echo "=> Auth Service 已停止"
+
+## auth-restart: 重啟 Auth Service
+auth-restart: auth-down auth-up
+
+## auth-logs: 查看 Auth Service 日誌
+auth-logs:
+	@cd cmd/auth-service && docker-compose logs -f auth-service
+
+## auth-ps: 查看 Auth Service 狀態
+auth-ps:
+	@cd cmd/auth-service && docker-compose ps
+
+## auth-clean: 清理 Auth Service 容器和資料
+auth-clean:
+	@echo "=> 清理 Auth Service..."
+	@cd cmd/auth-service && docker-compose down -v
+	@echo "=> Auth Service 已清理"
+
+## auth-shell: 進入 Auth Service 容器
+auth-shell:
+	@docker exec -it tabelogo-auth-service sh
+
+## auth-db: 連接到 Auth Service PostgreSQL
+auth-db:
+	@docker exec -it tabelogo-postgres-auth psql -U postgres -d auth_db
+
+## auth-redis: 連接到 Auth Service Redis
+auth-redis:
+	@docker exec -it tabelogo-redis-auth redis-cli
