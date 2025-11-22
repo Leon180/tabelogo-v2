@@ -1,64 +1,64 @@
-# Tabelogo v2 - Docker Compose 架構說明
+# Tabelogo v2 - Docker Compose Architecture
 
-## 架構概述
+## Architecture Overview
 
-本專案採用微服務架構，使用 Docker Compose 進行容器編排。有兩種 docker-compose 配置：
+This project uses a microservices architecture with Docker Compose for container orchestration. There are two types of docker-compose configurations:
 
-### 1. 根目錄 `docker-compose.yml` - 完整系統
+### 1. Root `docker-compose.yml` - Full System
 
-**用途：** 啟動整個 Tabelogo v2 系統，包含所有微服務和基礎設施
+**Purpose:** Starts the entire Tabelogo v2 system, including all microservices and infrastructure.
 
-**包含服務：**
-- **基礎設施**
-  - PostgreSQL (Auth, Restaurant, Booking 各自獨立)
-  - Redis (共享快取)
-  - Kafka + Zookeeper (訊息佇列)
-  - Prometheus (監控)
-  - Grafana (視覺化)
+**Included Services:**
+- **Infrastructure**
+  - PostgreSQL (Independent for Auth, Restaurant, Booking)
+  - Redis (Shared Cache)
+  - Kafka + Zookeeper (Message Queue)
+  - Prometheus (Monitoring)
+  - Grafana (Visualization)
 
-- **微服務**
+- **Microservices**
   - Auth Service (8080/HTTP, 9090/gRPC)
-  - Restaurant Service (待實作)
-  - Booking Service (待實作)
-  - API Gateway (待實作)
+  - Restaurant Service (To be implemented)
+  - Booking Service (To be implemented)
+  - API Gateway (To be implemented)
 
-**啟動方式：**
+**How to Start:**
 ```bash
-# 在專案根目錄
-make up              # 啟動所有服務
-make down            # 停止所有服務
-make ps              # 查看服務狀態
-make logs            # 查看所有日誌
+# In project root
+make up              # Start all services
+make down            # Stop all services
+make ps              # View service status
+make logs            # View all logs
 ```
 
-### 2. 各服務目錄 `cmd/*/docker-compose.yml` - 單服務開發
+### 2. Service Directory `cmd/*/docker-compose.yml` - Single Service Development
 
-**用途：** 僅用於單一服務的本地開發和測試
+**Purpose:** Used only for local development and testing of a single service.
 
-**特點：**
-- 使用不同的端口避免衝突
-- 只啟動該服務及其直接依賴
-- 適合快速迭代開發
+**Features:**
+- Uses different ports to avoid conflicts
+- Starts only the service and its direct dependencies
+- Suitable for rapid iteration
 
-**範例 - Auth Service 本地開發：**
+**Example - Auth Service Local Development:**
 ```bash
 cd cmd/auth-service
-docker-compose up -d    # 啟動 Auth Service (端口 18080/19090)
-docker-compose down     # 停止
+docker-compose up -d    # Start Auth Service (Ports 18080/19090)
+docker-compose down     # Stop
 ```
 
-或使用 Makefile：
+Or using Makefile:
 ```bash
-make auth-up            # 啟動 Auth Service (本地開發模式)
-make auth-down          # 停止
-make auth-logs          # 查看日誌
+make auth-up            # Start Auth Service (Local Dev Mode)
+make auth-down          # Stop
+make auth-logs          # View logs
 ```
 
-## 端口分配
+## Port Allocation
 
-### 根目錄 docker-compose (生產模式)
-| 服務 | HTTP | gRPC | 其他 |
-|------|------|------|------|
+### Root docker-compose (Production Mode)
+| Service | HTTP | gRPC | Other |
+|---------|------|------|-------|
 | Auth Service | 8080 | 9090 | - |
 | Restaurant Service | 8081 | 9091 | - |
 | Booking Service | 8082 | 9092 | - |
@@ -71,93 +71,93 @@ make auth-logs          # 查看日誌
 | Prometheus | - | - | 9090 |
 | Grafana | - | - | 3000 |
 
-### 服務目錄 docker-compose (開發模式)
-| 服務 | HTTP | gRPC | DB | Redis |
-|------|------|------|-----|-------|
+### Service Directory docker-compose (Development Mode)
+| Service | HTTP | gRPC | DB | Redis |
+|---------|------|------|----|-------|
 | Auth Service | 18080 | 19090 | 15432 | 16379 |
 
-## 使用場景
+## Usage Scenarios
 
-### 場景 1: 完整系統測試
+### Scenario 1: Full System Testing
 ```bash
-# 啟動整個系統
+# Start entire system
 make up
 
-# 測試服務間通訊
+# Test inter-service communication
 curl http://localhost:8080/health
 ```
 
-### 場景 2: 單服務開發
+### Scenario 2: Single Service Development
 ```bash
-# 只開發 Auth Service
+# Develop only Auth Service
 cd cmd/auth-service
 docker-compose up -d
 
-# 或使用 Makefile
+# Or use Makefile
 make auth-up
 ```
 
-### 場景 3: 新增微服務
-1. 在 `cmd/new-service/` 建立服務
-2. 建立 `cmd/new-service/Dockerfile`
-3. 建立 `cmd/new-service/docker-compose.yml` (開發用)
-4. 在根目錄 `docker-compose.yml` 加入服務定義
-5. 更新 `Makefile` 加入相關指令
+### Scenario 3: Adding New Microservice
+1. Create service in `cmd/new-service/`
+2. Create `cmd/new-service/Dockerfile`
+3. Create `cmd/new-service/docker-compose.yml` (For development)
+4. Add service definition to root `docker-compose.yml`
+5. Update `Makefile` with relevant commands
 
-## 網路架構
+## Network Architecture
 
-所有服務都在同一個 Docker 網路 `tabelogo-network` 中，可以通過服務名稱互相通訊：
+All services are in the same Docker network `tabelogo-network` and can communicate with each other via service names:
 
 ```yaml
-# 範例：Restaurant Service 呼叫 Auth Service
+# Example: Restaurant Service calling Auth Service
 AUTH_SERVICE_URL: http://auth-service:8080
 AUTH_SERVICE_GRPC: auth-service:9090
 ```
 
-## 資料持久化
+## Data Persistence
 
-所有資料庫和快取都使用 Docker Volumes 持久化：
+All databases and caches use Docker Volumes for persistence:
 
 ```bash
-# 查看 volumes
+# List volumes
 docker volume ls | grep tabelogo
 
-# 清理所有資料 (危險！)
+# Clean all data (Dangerous!)
 make clean
 ```
 
-## 最佳實踐
+## Best Practices
 
-1. **開發時**：使用服務目錄的 docker-compose
-2. **整合測試**：使用根目錄的 docker-compose
-3. **生產部署**：使用 Kubernetes (未來)
-4. **端口衝突**：確保開發模式使用不同端口
+1. **Development**: Use service directory docker-compose
+2. **Integration Testing**: Use root docker-compose
+3. **Production Deployment**: Use Kubernetes (Future)
+4. **Port Conflicts**: Ensure development mode uses different ports
 
-## 故障排除
+## Troubleshooting
 
-### 端口已被佔用
+### Port Already in Use
 ```bash
-# 檢查端口佔用
+# Check port usage
 lsof -i :8080
 
-# 使用開發模式（不同端口）
+# Use development mode (different ports)
 make auth-up
 ```
 
-### 服務無法啟動
+### Service Fails to Start
 ```bash
-# 查看日誌
+# View logs
 make logs
 
-# 或特定服務
+# Or specific service
 make auth-logs
 ```
 
-### 清理並重新開始
+### Clean and Restart
 ```bash
-# 停止並刪除所有容器和資料
+# Stop and remove all containers and data
 make clean
 
-# 重新啟動
+# Restart
 make up
 ```
