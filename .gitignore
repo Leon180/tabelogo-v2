@@ -14,9 +14,6 @@
 # Dependency directories
 vendor/
 
-# Go workspace file
-go.work
-
 # Environment variables
 .env
 .env.local
@@ -69,3 +66,6 @@ note.*
 
 # go binary
 tabelogo-v2
+
+# go work
+go.work*
