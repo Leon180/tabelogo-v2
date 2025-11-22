@@ -1,8 +1,6 @@
 module github.com/Leon180/tabelogo-v2/pkg
 
-go 1.23.0
-
-toolchain go1.23.10
+go 1.23
 
 require (
 	github.com/gin-gonic/gin v1.10.0
