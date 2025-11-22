@@ -1,88 +1,88 @@
-# 多來源餐廳聚合平台 (Tabelogo V2)
+# Multi-Source Restaurant Aggregator (Tabelogo V2)
 
-一個基於微服務架構的餐廳資訊聚合平台，整合多個餐廳資訊來源，提供餐廳搜尋、預訂、評論等功能。
+A microservices-based restaurant information aggregator platform that integrates multiple restaurant data sources, providing restaurant search, booking, and review functionalities.
 
-## 🏗 架構特色
+## 🏗 Architecture Features
 
-- **微服務架構**：每個服務獨立開發、部署、擴展
-- **Database per Service**：每個微服務擁有獨立的資料庫實例
-- **DDD 設計**：領域驅動設計，清晰的分層架構
-- **Event-Driven**：使用 Kafka 實現事件驅動架構
-- **gRPC 通訊**：服務間使用高效的 gRPC 通訊
-- **完整監控**：Prometheus + Grafana + Jaeger 可觀測性
+- **Microservices Architecture**: Independent development, deployment, and scaling for each service
+- **Database per Service**: Each microservice has its own independent database instance
+- **DDD Design**: Domain-Driven Design with clear layered architecture
+- **Event-Driven**: Event-driven architecture using Kafka
+- **gRPC Communication**: Efficient gRPC communication between services
+- **Full Monitoring**: Observability with Prometheus + Grafana + Jaeger
 
-## 🎯 核心服務
+## 🎯 Core Services
 
-| 服務 | 端口 | 資料庫 | 說明 |
-|------|------|--------|------|
-| API Gateway | 8080 | - | 統一入口、路由、認證 |
-| Auth Service | 8081/9081 | auth_db | 使用者認證與授權 |
-| Restaurant Service | 8082/9082 | restaurant_db | 餐廳資料管理 |
-| Booking Service | 8083/9083 | booking_db | 預訂功能 |
-| Spider Service | 8084/9084 | spider_db | 爬蟲服務 |
-| Mail Service | 8085/9085 | mail_db | 郵件通知 |
-| Map Service | 8086/9086 | - | 地圖與導航 |
+| Service | Port | Database | Description |
+|---------|------|----------|-------------|
+| API Gateway | 8080 | - | Unified entry point, routing, authentication |
+| Auth Service | 8081/9081 | auth_db | User authentication and authorization |
+| Restaurant Service | 8082/9082 | restaurant_db | Restaurant data management |
+| Booking Service | 8083/9083 | booking_db | Booking functionality |
+| Spider Service | 8084/9084 | spider_db | Crawler service |
+| Mail Service | 8085/9085 | mail_db | Email notification |
+| Map Service | 8086/9086 | - | Maps and navigation |
 
-## 🚀 快速開始
+## 🚀 Quick Start
 
-### 前置需求
+### Prerequisites
 
 - Docker & Docker Compose
-- Go 1.21+
+- Go 1.24+
 - Make
 
-### 本地開發環境設定
+### Local Development Setup
 
 ```bash
 # 1. Clone repository
 git clone https://github.com/Leon180/tabelogo-v2.git
 cd tabelogov2
 
-# 2. 初始化專案（建立 .env 檔案）
+# 2. Initialize project (create .env file)
 make init
 
-# 3. 啟動所有基礎設施（PostgreSQL, Redis, Kafka等）
+# 3. Start all infrastructure (PostgreSQL, Redis, Kafka, etc.)
 make up
 
-# 4. 檢查容器狀態
+# 4. Check container status
 make ps
 ```
 
-### 可用的 Make 指令
+### Available Make Commands
 
 ```bash
-make help          # 顯示所有可用指令
-make init          # 初始化專案
-make up            # 啟動所有 Docker 容器
-make down          # 停止所有容器
-make restart       # 重啟所有容器
-make logs          # 查看容器日誌
-make ps            # 查看容器狀態
-make clean         # 清理所有容器和 volumes
-make build         # 建置所有微服務
-make test          # 執行所有測試
-make lint          # 執行程式碼檢查
-make migrate-up    # 執行資料庫 migrations
-make migrate-down  # 回滾資料庫 migrations
+make help          # Show all available commands
+make init          # Initialize project
+make up            # Start all Docker containers
+make down          # Stop all containers
+make restart       # Restart all containers
+make logs          # View container logs
+make ps            # View container status
+make clean         # Clean up all containers and volumes
+make build         # Build all microservices
+make test          # Run all tests
+make lint          # Run code linter
+make migrate-up    # Run database migrations
+make migrate-down  # Rollback database migrations
 ```
 
-## 🗄️ 資料庫架構
+## 🗄️ Database Architecture
 
-### Database per Service 原則
+### Database per Service Principle
 
-每個微服務擁有獨立的 PostgreSQL 資料庫實例：
+Each microservice has its own independent PostgreSQL database instance:
 
-| 資料庫 | 端口 | 用途 |
-|--------|------|------|
-| auth_db | 5432 | 使用者認證資料 |
-| restaurant_db | 5433 | 餐廳主資料 |
-| booking_db | 5434 | 預訂資料 |
-| spider_db | 5435 | 爬蟲任務與結果 |
-| mail_db | 5436 | 郵件佇列與記錄 |
+| Database | Port | Usage |
+|----------|------|-------|
+| auth_db | 5432 | User authentication data |
+| restaurant_db | 5433 | Restaurant master data |
+| booking_db | 5434 | Booking data |
+| spider_db | 5435 | Crawler jobs and results |
+| mail_db | 5436 | Email queue and logs |
 
-### Redis 配置
+### Redis Configuration
 
-使用不同的 Redis Database Number 區分各服務：
+Different Redis Database Numbers are used to distinguish services:
 
 - DB 0: Auth Service (Session, Token Blacklist)
 - DB 1: Restaurant Service (Restaurant Cache)
@@ -90,61 +90,61 @@ make migrate-down  # 回滾資料庫 migrations
 - DB 3: Spider Service (Rate Limiting, Distributed Lock)
 - DB 4: API Gateway (Rate Limiting, API Cache)
 
-## 📊 監控與可觀測性
+## 📊 Monitoring & Observability
 
 - **Kafka UI**: http://localhost:8080
 - **Grafana**: http://localhost:3000 (admin/admin)
 - **Prometheus**: http://localhost:9090
 
-## 🔧 技術棧
+## 🔧 Tech Stack
 
-- **語言**: Go 1.21+
+- **Language**: Go 1.24+
 - **Web Framework**: Gin
 - **gRPC**: Protocol Buffers
-- **資料庫**: PostgreSQL 15
+- **Database**: PostgreSQL 15
 - **Cache**: Redis 7
 - **Message Queue**: Apache Kafka
-- **監控**: Prometheus + Grafana + Jaeger
-- **日誌**: Zap + OpenTelemetry
-- **容器化**: Docker + Docker Compose
+- **Monitoring**: Prometheus + Grafana + Jaeger
+- **Logging**: Zap + OpenTelemetry
+- **Containerization**: Docker + Docker Compose
 
-## 📁 專案結構
+## 📁 Project Structure
 
 ```
 tabelogov2/
-├── cmd/                      # 各微服務入口（每個都有獨立的 go.mod）
-├── internal/                 # 按服務分離的內部程式碼
-├── pkg/                      # 共用套件（獨立的 go.mod）
-├── api/proto/                # gRPC Protocol Buffers 定義
-├── migrations/               # 各服務的資料庫 migrations
-├── deployments/              # Docker & Kubernetes 配置
-├── scripts/                  # 建置與部署腳本
-├── tests/                    # 測試
-└── docs/                     # 文檔
+├── cmd/                      # Entry points for each microservice (independent go.mod)
+├── internal/                 # Internal code separated by service
+├── pkg/                      # Shared packages (independent go.mod)
+├── api/proto/                # gRPC Protocol Buffers definitions
+├── migrations/               # Database migrations for each service
+├── deployments/              # Docker & Kubernetes configurations
+├── scripts/                  # Build and deployment scripts
+├── tests/                    # Tests
+└── docs/                     # Documentation
 ```
 
-詳細架構文檔請參考：[architecture.md](docs/architecture.md)
+Detailed architecture documentation: [architecture.md](docs/architecture.md)
 
-## 🔐 環境變數
+## 🔐 Environment Variables
 
-複製 `.env.example` 到 `.env` 並修改相關設定：
+Copy `.env.example` to `.env` and modify the settings:
 
 ```bash
 cp .env.example .env
 ```
 
-重要變數：
-- `JWT_SECRET`: JWT 簽名密鑰（生產環境務必更換）
-- `GOOGLE_MAPS_API_KEY`: Google Maps API 金鑰
-- `SMTP_*`: 郵件服務設定
+Important variables:
+- `JWT_SECRET`: JWT signing secret (Must change for production)
+- `GOOGLE_MAPS_API_KEY`: Google Maps API Key
+- `SMTP_*`: Email service settings
 
-## 🧪 測試
+## 🧪 Testing
 
 ```bash
-# 執行所有服務的測試
+# Run tests for all services
 make test
 
-# 執行特定服務的測試
+# Run tests for a specific service
 cd cmd/auth-service && go test ./... -v
 ```
 
@@ -152,6 +152,6 @@ cd cmd/auth-service && go test ./... -v
 
 MIT License
 
-## 👥 作者
+## 👥 Author
 
 Leon Li

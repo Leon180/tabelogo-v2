@@ -4,118 +4,212 @@
 DOCKER_COMPOSE = docker-compose -f deployments/docker-compose/docker-compose.yml
 SERVICES = auth-service restaurant-service booking-service spider-service mail-service map-service api-gateway
 
-## help: 顯示此幫助訊息
+## help: Show this help message
 help:
-	@echo "可用指令："
-	@echo "  make init        - 初始化專案（建立 .env、安裝依賴）"
-	@echo "  make up          - 啟動所有 Docker 容器"
-	@echo "  make down        - 停止並移除所有容器"
-	@echo "  make restart     - 重啟所有容器"
-	@echo "  make logs        - 查看所有容器日誌"
-	@echo "  make ps          - 查看容器狀態"
-	@echo "  make clean       - 清理所有容器和 volumes"
-	@echo "  make build       - 建置所有微服務"
-	@echo "  make test        - 執行所有測試"
-	@echo "  make lint        - 執行程式碼檢查"
-	@echo "  make proto       - 生成 Protocol Buffers 程式碼"
-	@echo "  make migrate     - 執行資料庫 migrations"
+	@echo "Available commands:"
+	@echo "  make init            - Initialize project (create .env, install dependencies)"
+	@echo "  make up              - Start all Docker containers (Full System)"
+	@echo "  make down            - Stop and remove all containers (Full System)"
+	@echo "  make restart         - Restart all containers"
+	@echo "  make logs            - View logs for all containers"
+	@echo "  make ps              - View container status"
+	@echo "  make clean           - Clean up all containers and volumes"
+	@echo "  make build           - Build all microservices"
+	@echo "  make test            - Run all tests"
+	@echo "  make lint            - Run code linter"
+	@echo "  make proto           - Generate Protocol Buffers code"
+	@echo "  make migrate-up      - Run database migrations"
+	@echo "  make migrate-down    - Rollback database migrations"
+	@echo ""
+	@echo "Auth Service Commands (Local Dev):"
+	@echo "  make auth-up         - Start Auth Service (Port 18080/19090)"
+	@echo "  make auth-down       - Stop Auth Service"
+	@echo "  make auth-restart    - Restart Auth Service"
+	@echo "  make auth-logs       - View Auth Service logs"
+	@echo "  make auth-ps         - View Auth Service status"
+	@echo "  make auth-clean      - Clean Auth Service container and data"
+	@echo "  make auth-shell      - Enter Auth Service container"
+	@echo "  make auth-db         - Connect to Auth Service PostgreSQL"
+	@echo "  make auth-redis      - Connect to Auth Service Redis"
+	@echo "  make auth-build      - Build Auth Service Docker Image"
 
-## init: 初始化專案
+## init: Initialize project
 init:
-	@echo "=> 初始化專案..."
-	@if [ ! -f .env ]; then cp .env.example .env && echo "已建立 .env 檔案"; fi
-	@echo "=> 初始化完成！"
+	@echo "=> Initializing project..."
+	@if [ ! -f .env ]; then cp .env.example .env && echo ".env file created"; fi
+	@echo "=> Initialization complete!"
 
-## up: 啟動所有 Docker 容器
+## up: Start all Docker containers
 up:
-	@echo "=> 啟動 Docker 容器..."
+	@echo "=> Starting all microservices..."
 	$(DOCKER_COMPOSE) up -d
-	@echo "=> 所有容器已啟動"
-	@echo "=> Kafka UI: http://localhost:8080"
+	@echo "=> All services started"
+	@echo "=> Auth Service HTTP: http://localhost:8080"
+	@echo "=> Auth Service gRPC: localhost:9090"
 	@echo "=> Grafana: http://localhost:3000 (admin/admin)"
 	@echo "=> Prometheus: http://localhost:9090"
 
-## down: 停止並移除所有容器
+## down: Stop and remove all containers
 down:
-	@echo "=> 停止所有容器..."
+	@echo "=> Stopping all containers..."
 	$(DOCKER_COMPOSE) down
 
-## restart: 重啟所有容器
+## restart: Restart all containers
 restart: down up
 
-## logs: 查看所有容器日誌
+## logs: View logs for all containers
 logs:
 	$(DOCKER_COMPOSE) logs -f
 
-## ps: 查看容器狀態
+## ps: View container status
 ps:
 	$(DOCKER_COMPOSE) ps
 
-## clean: 清理所有容器和 volumes
+## clean: Clean up all containers and volumes
 clean:
-	@echo "=> 清理所有容器和 volumes..."
+	@echo "=> Cleaning up all containers and volumes..."
 	$(DOCKER_COMPOSE) down -v --remove-orphans
-	@echo "=> 清理完成"
+	@echo "=> Cleanup complete"
 
-## build: 建置所有微服務
+## build: Build all microservices
 build:
-	@echo "=> 建置所有微服務..."
+	@echo "=> Building all microservices..."
 	@for service in $(SERVICES); do \
 		echo "Building $$service..."; \
 		cd cmd/$$service && go build -o ../../bin/$$service . && cd ../..; \
 	done
-	@echo "=> 建置完成"
+	@echo "=> Build complete"
 
-## test: 執行所有測試
+## test: Run all tests
 test:
-	@echo "=> 執行測試..."
+	@echo "=> Running tests..."
 	@for service in $(SERVICES); do \
 		echo "Testing $$service..."; \
 		cd cmd/$$service && go test ./... -v && cd ../..; \
 	done
-	@echo "=> 測試完成"
+	@echo "=> Tests complete"
 
-## lint: 執行程式碼檢查
+## lint: Run code linter
 lint:
-	@echo "=> 執行 golangci-lint..."
+	@echo "=> Running golangci-lint..."
 	@for service in $(SERVICES); do \
 		echo "Linting $$service..."; \
 		cd cmd/$$service && golangci-lint run && cd ../..; \
 	done
-	@echo "=> Lint 完成"
+	@echo "=> Lint complete"
 
-## proto: 生成 Protocol Buffers 程式碼
+## proto: Generate Protocol Buffers code
 proto:
-	@echo "=> 生成 protobuf 程式碼..."
+	@echo "=> Generating protobuf code..."
 	@chmod +x scripts/generate-proto.sh
 	@./scripts/generate-proto.sh
-	@echo "=> Protobuf 程式碼生成完成"
+	@echo "=> Protobuf code generation complete"
 
-## migrate-up: 執行所有資料庫 migrations (up)
+## migrate-up: Run all database migrations (up)
 migrate-up:
-	@echo "=> 執行資料庫 migrations..."
-	@echo "執行 auth DB migration..."
+	@echo "=> Running database migrations..."
+	@echo "Running auth DB migration..."
 	@migrate -path migrations/auth -database "postgres://postgres:postgres@localhost:5432/auth_db?sslmode=disable" up || true
-	@echo "執行 restaurant DB migration..."
+	@echo "Running restaurant DB migration..."
 	@migrate -path migrations/restaurant -database "postgres://postgres:postgres@localhost:5433/restaurant_db?sslmode=disable" up || true
-	@echo "執行 booking DB migration..."
+	@echo "Running booking DB migration..."
 	@migrate -path migrations/booking -database "postgres://postgres:postgres@localhost:5434/booking_db?sslmode=disable" up || true
-	@echo "執行 spider DB migration..."
+	@echo "Running spider DB migration..."
 	@migrate -path migrations/spider -database "postgres://postgres:postgres@localhost:5435/spider_db?sslmode=disable" up || true
-	@echo "執行 mail DB migration..."
+	@echo "Running mail DB migration..."
 	@migrate -path migrations/mail -database "postgres://postgres:postgres@localhost:5436/mail_db?sslmode=disable" up || true
-	@echo "=> Migrations 完成"
+	@echo "=> Migrations complete"
 
-## migrate-down: 回滾所有資料庫 migrations
+## migrate-down: Rollback all database migrations
 migrate-down:
-	@echo "=> 回滾資料庫 migrations..."
+	@echo "=> Rolling back database migrations..."
 	@migrate -path migrations/auth -database "postgres://postgres:postgres@localhost:5432/auth_db?sslmode=disable" down || true
 	@migrate -path migrations/restaurant -database "postgres://postgres:postgres@localhost:5433/restaurant_db?sslmode=disable" down || true
 	@migrate -path migrations/booking -database "postgres://postgres:postgres@localhost:5434/booking_db?sslmode=disable" down || true
 	@migrate -path migrations/spider -database "postgres://postgres:postgres@localhost:5435/spider_db?sslmode=disable" down || true
 	@migrate -path migrations/mail -database "postgres://postgres:postgres@localhost:5436/mail_db?sslmode=disable" down || true
-	@echo "=> Rollback 完成"
+	@echo "=> Rollback complete"
 
-## dev: 啟動開發環境
+## dev: Start development environment
 dev: init up
-	@echo "=> 開發環境已啟動！"
+	@echo "=> Development environment started!"
+
+## test-unit: Run unit tests
+test-unit:
+	@echo "=> Running unit tests..."
+	@go test -v -short ./internal/auth/application/...
+	@echo "=> Unit tests complete"
+
+## test-integration: Run integration tests
+test-integration:
+	@echo "=> Starting test environment..."
+	@docker-compose -f docker-compose.test.yml up -d
+	@echo "=> Waiting for services to be ready..."
+	@sleep 5
+	@echo "=> Running integration tests..."
+	@TEST_DB_HOST=localhost TEST_DB_PORT=5433 TEST_REDIS_ADDR=localhost:6380 \
+		go test -v ./tests/integration/...
+	@echo "=> Stopping test environment..."
+	@docker-compose -f docker-compose.test.yml down
+	@echo "=> Integration tests complete"
+
+## test-all: Run all tests
+test-all: test-unit test-integration
+	@echo "=> All tests complete"
+
+## test-coverage: Run tests and generate coverage report
+test-coverage:
+	@echo "=> Generating test coverage report..."
+	@go test -v -coverprofile=coverage.out ./internal/auth/...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "=> Coverage report generated: coverage.html"
+
+## auth-build: Build Auth Service Docker Image
+auth-build:
+	@echo "=> Building Auth Service Docker Image..."
+	@docker build -f cmd/auth-service/Dockerfile -t tabelogo-auth-service:latest .
+	@echo "=> Auth Service Image built"
+
+## auth-up: Start Auth Service and dependencies (PostgreSQL, Redis)
+auth-up:
+	@echo "=> Starting Auth Service..."
+	@docker-compose -f deployments/docker-compose/auth-service.yml up -d
+	@echo "=> Auth Service started"
+	@echo "=> HTTP API: http://localhost:18080"
+	@echo "=> gRPC API: localhost:19090"
+	@echo "=> View logs: make auth-logs"
+
+## auth-down: Stop Auth Service
+auth-down:
+	@echo "=> Stopping Auth Service..."
+	@docker-compose -f deployments/docker-compose/auth-service.yml down
+	@echo "=> Auth Service stopped"
+
+## auth-restart: Restart Auth Service
+auth-restart: auth-down auth-up
+
+## auth-logs: View Auth Service logs
+auth-logs:
+	@docker-compose -f deployments/docker-compose/auth-service.yml logs -f auth-service
+
+## auth-ps: View Auth Service status
+auth-ps:
+	@docker-compose -f deployments/docker-compose/auth-service.yml ps
+
+## auth-clean: Clean Auth Service container and data
+auth-clean:
+	@echo "=> Cleaning Auth Service..."
+	@docker-compose -f deployments/docker-compose/auth-service.yml down -v
+	@echo "=> Auth Service cleaned"
+
+## auth-shell: Enter Auth Service container
+auth-shell:
+	@docker exec -it tabelogo-auth-service sh
+
+## auth-db: Connect to Auth Service PostgreSQL
+auth-db:
+	@docker exec -it tabelogo-postgres-auth-dev psql -U postgres -d auth_db
+
+## auth-redis: Connect to Auth Service Redis
+auth-redis:
+	@docker exec -it tabelogo-redis-auth-dev redis-cli
