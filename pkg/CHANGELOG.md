@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.2.0...tabelogo-v2/pkg-v0.3.0) (2025-11-24)
+
+
+### Features
+
+* **auth:** finalize docker and makefile configuration ([d84778a](https://github.com/Leon180/tabelogo-v2/commit/d84778a50322b99f1e1ab5bcfe7488d3eb2515ae))
+* **auth:** implement domain, infra, app, and grpc layers ([ce6abd7](https://github.com/Leon180/tabelogo-v2/commit/ce6abd7ae9dd67fab16e19c0b96cfd677e7455a6))
+
 ## [0.2.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.1.0...tabelogo-v2/pkg-v0.2.0) (2025-11-22)
 
 
