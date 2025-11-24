@@ -18,6 +18,12 @@ vendor/
 .env
 .env.local
 .env.*.local
+*.env
+cmd/*/.env
+deployments/**/.env
+deployments/**/.env.*
+!.env.example
+!.env.*.example
 
 # IDE
 .idea/

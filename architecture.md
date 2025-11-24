@@ -1108,6 +1108,9 @@ internal/restaurant/
   - [x] gRPC Server 實作
   - [x] JWT 簽發與驗證
   - [x] RBAC 權限管理
+- [ ] frontend 開發
+  - [ ] 參考舊版前端 ui 設計完整開發流程
+  - [ ] 待定
 - [ ] Restaurant Service 開發
   - [ ] Domain Layer: Restaurant Aggregate
   - [ ] gRPC Server 實作
