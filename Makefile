@@ -20,8 +20,12 @@ help:
 	@echo "  make proto           - Generate Protocol Buffers code"
 	@echo "  make migrate-up      - Run database migrations"
 	@echo "  make migrate-down    - Rollback database migrations"
+	@echo "  make swagger         - Generate Swagger documentation for all services"
+	@echo "  make swagger-auth    - Generate Swagger docs for Auth Service"
 	@echo ""
-	@echo "Auth Service Commands (Local Dev):"
+	@echo "Auth Service Commands (Docker):"
+	@echo "  make auth-build      - Build Auth Service Docker Image"
+	@echo "  make auth-rebuild    - Rebuild & restart Auth Service (with tests)"
 	@echo "  make auth-up         - Start Auth Service (Port 18080/19090)"
 	@echo "  make auth-down       - Stop Auth Service"
 	@echo "  make auth-restart    - Restart Auth Service"
@@ -32,6 +36,7 @@ help:
 	@echo "  make auth-db         - Connect to Auth Service PostgreSQL"
 	@echo "  make auth-redis      - Connect to Auth Service Redis"
 	@echo "  make auth-build      - Build Auth Service Docker Image"
+	@echo "  make auth-dev        - Run Auth Service locally with auto Swagger gen"
 
 ## init: Initialize project
 init:
@@ -170,6 +175,11 @@ auth-build:
 	@docker build -f cmd/auth-service/Dockerfile -t tabelogo-auth-service:latest .
 	@echo "=> Auth Service Image built"
 
+## auth-rebuild: Rebuild and restart Auth Service (full rebuild with tests)
+auth-rebuild:
+	@echo "=> Rebuilding Auth Service..."
+	@./scripts/rebuild-docker-auth.sh
+
 ## auth-up: Start Auth Service and dependencies (PostgreSQL, Redis)
 auth-up:
 	@echo "=> Starting Auth Service..."
@@ -213,3 +223,20 @@ auth-db:
 ## auth-redis: Connect to Auth Service Redis
 auth-redis:
 	@docker exec -it tabelogo-redis-auth-dev redis-cli
+
+## swagger: Generate Swagger documentation for all services
+swagger: swagger-auth
+	@echo "=> All Swagger documentation generated"
+
+## swagger-auth: Generate Swagger documentation for Auth Service
+swagger-auth:
+	@echo "=> Generating Swagger docs for Auth Service..."
+	swag init --generalInfo cmd/auth-service/main.go --output internal/auth/docs --parseDependency --parseInternal
+	@echo "=> Auth Service Swagger docs generated at internal/auth/docs/"
+	@echo "=> Local Dev: http://localhost:8081/auth-service/swagger/index.html"
+	@echo "=> Docker: http://localhost:18080/auth-service/swagger/index.html"
+
+## auth-dev: Run Auth Service locally with auto Swagger generation
+auth-dev:
+	@echo "=> Starting Auth Service in development mode..."
+	@./scripts/start-auth-service.sh

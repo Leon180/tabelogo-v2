@@ -1,0 +1,27 @@
+{
+  "go.goroot": "/Users/lileon/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.0.darwin-arm64",
+  "go.gopath": "/Users/lileon/go",
+  "go.alternateTools": {
+    "go": "/Users/lileon/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.0.darwin-arm64/bin/go"
+  },
+  "go.useLanguageServer": true,
+  "go.languageServerFlags": [
+    "-rpc.trace"
+  ],
+  "gopls": {
+    "build.directoryFilters": [
+      "-node_modules",
+      "-vendor"
+    ],
+    "ui.semanticTokens": true,
+    "ui.completion.usePlaceholders": true,
+    "formatting.gofumpt": true
+  },
+  "go.toolsManagement.autoUpdate": true,
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/vendor/**": true
+  }
+}

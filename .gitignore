@@ -27,7 +27,7 @@ deployments/**/.env.*
 
 # IDE
 .idea/
-.vscode/
+# .vscode/ - Keep VSCode configs for debugging
 *.swp
 *.swo
 *~
@@ -73,5 +73,9 @@ note.*
 # go binary
 tabelogo-v2
 
-# go work
+# go work (except for this project)
 go.work*
+!go.work
+
+# Swagger generated docs (keep for deployment)
+# internal/*/docs/ - Keep swagger docs for services

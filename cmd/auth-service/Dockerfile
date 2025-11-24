@@ -16,9 +16,19 @@ COPY cmd/auth-service/go.mod cmd/auth-service/go.sum ./cmd/auth-service/
 WORKDIR /app/cmd/auth-service
 RUN GOWORK=off go mod download
 
+# Install swag CLI for Swagger generation
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
 # Copy source code
 WORKDIR /app
 COPY . .
+
+# Generate Swagger documentation
+RUN swag init \
+    --generalInfo cmd/auth-service/main.go \
+    --output internal/auth/docs \
+    --parseDependency \
+    --parseInternal
 
 # Build the application (with GOWORK=off)
 WORKDIR /app/cmd/auth-service
@@ -40,6 +50,9 @@ WORKDIR /app
 
 # Copy binary from builder
 COPY --from=builder /app/bin/auth-service .
+
+# Copy Swagger docs from builder (maintain directory structure)
+COPY --from=builder /app/internal/auth/docs ./internal/auth/docs
 
 # Change ownership
 RUN chown -R appuser:appuser /app
