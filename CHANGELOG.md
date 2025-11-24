@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.4.0...tabelogo-v2-v0.4.1) (2025-11-24)
+
+
+### Bug Fixes
+
+* **auth-service:** resolve Swagger UI access issues in local and Docker environments ([b13ff12](https://github.com/Leon180/tabelogo-v2/commit/b13ff12f43ad27e4dd12af39eb4e46050fbec299))
+
 ## [0.4.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.3.0...tabelogo-v2-v0.4.0) (2025-11-24)
 
 
