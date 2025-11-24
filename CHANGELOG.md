@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.3.0...tabelogo-v2-v0.4.0) (2025-11-24)
+
+
+### Features
+
+* **frontend:** implement Next.js frontend with Google Maps integration ([5be5847](https://github.com/Leon180/tabelogo-v2/commit/5be5847a6a9609f66d53be173cdabdaeebff4bbc))
+
 ## [0.3.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.2.0...tabelogo-v2-v0.3.0) (2025-11-24)
 
 
