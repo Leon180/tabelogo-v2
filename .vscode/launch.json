@@ -1,0 +1,122 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Auth Service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/auth-service",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ENVIRONMENT": "development",
+        "SERVER_PORT": "8081",
+        "GRPC_PORT": "9091",
+        "DB_HOST": "localhost",
+        "DB_PORT": "15432",
+        "DB_NAME": "auth_db",
+        "DB_USER": "postgres",
+        "DB_PASSWORD": "postgres",
+        "REDIS_HOST": "localhost",
+        "REDIS_PORT": "16379",
+        "REDIS_PASSWORD": "",
+        "REDIS_DB": "0",
+        "JWT_SECRET": "your-super-secret-jwt-key-change-in-production",
+        "JWT_ACCESS_TOKEN_EXPIRE": "15m",
+        "JWT_REFRESH_TOKEN_EXPIRE": "168h"
+      },
+      "args": [],
+      "showLog": true,
+      "preLaunchTask": "swag-init-auth"
+    },
+    {
+      "name": "Restaurant Service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/restaurant-service",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ENVIRONMENT": "development",
+        "SERVER_PORT": "8082",
+        "GRPC_PORT": "9092"
+      },
+      "args": [],
+      "showLog": true
+    },
+    {
+      "name": "Booking Service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/booking-service",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ENVIRONMENT": "development",
+        "SERVER_PORT": "8083",
+        "GRPC_PORT": "9093"
+      },
+      "args": [],
+      "showLog": true
+    },
+    {
+      "name": "Mail Service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/mail-service",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ENVIRONMENT": "development",
+        "SERVER_PORT": "8084",
+        "GRPC_PORT": "9094"
+      },
+      "args": [],
+      "showLog": true
+    },
+    {
+      "name": "Spider Service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/spider-service",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ENVIRONMENT": "development",
+        "SERVER_PORT": "8085",
+        "GRPC_PORT": "9095"
+      },
+      "args": [],
+      "showLog": true
+    },
+    {
+      "name": "Map Service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/map-service",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ENVIRONMENT": "development",
+        "SERVER_PORT": "8086",
+        "GRPC_PORT": "9096"
+      },
+      "args": [],
+      "showLog": true
+    },
+    {
+      "name": "API Gateway",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/api-gateway",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ENVIRONMENT": "development",
+        "SERVER_PORT": "8080"
+      },
+      "args": [],
+      "showLog": true
+    }
+  ]
+}

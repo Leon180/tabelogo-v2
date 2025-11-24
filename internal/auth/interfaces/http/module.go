@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 
+	"github.com/Leon180/tabelogo-v2/internal/auth/docs"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
@@ -45,6 +48,39 @@ func RegisterRoutes(
 		authGroup.POST("/refresh", handler.RefreshToken)
 		authGroup.GET("/validate", handler.ValidateToken)
 	}
+
+	// Swagger documentation endpoints
+	// Use service-specific path (/auth-service/swagger/) to avoid conflicts with other services
+	router.GET("/auth-service/swagger/doc.json", func(c *gin.Context) {
+		c.String(http.StatusOK, docs.SwaggerInfo.ReadDoc())
+	})
+
+	router.GET("/auth-service/swagger/index.html", func(c *gin.Context) {
+		// Read file directly to avoid http.ServeFile's automatic redirects
+		absPath, err := filepath.Abs("./internal/auth/docs/index.html")
+		if err != nil {
+			logger.Error("Failed to resolve Swagger UI path", zap.Error(err))
+			c.String(http.StatusInternalServerError, "Internal server error")
+			return
+		}
+
+		content, err := os.ReadFile(absPath)
+		if err != nil {
+			logger.Error("Failed to read Swagger UI file", zap.Error(err))
+			c.String(http.StatusNotFound, "Swagger UI not found")
+			return
+		}
+
+		c.Data(http.StatusOK, "text/html; charset=utf-8", content)
+	})
+
+	// Redirect shortcuts for convenience
+	router.GET("/swagger", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/auth-service/swagger/index.html")
+	})
+	router.GET("/auth-service/swagger", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/auth-service/swagger/index.html")
+	})
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {

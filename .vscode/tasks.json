@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "swag-init-auth",
+      "type": "shell",
+      "command": "swag",
+      "args": [
+        "init",
+        "--generalInfo",
+        "cmd/auth-service/main.go",
+        "--output",
+        "internal/auth/docs",
+        "--parseDependency",
+        "--parseInternal"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    }
+  ]
+}
