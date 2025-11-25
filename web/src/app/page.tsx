@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import type { Restaurant } from '@/types/restaurant';
 import type { SearchFilters } from '@/types/search';
+import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Mock data for initial development
 const mockRestaurants: Restaurant[] = [
@@ -40,6 +42,7 @@ export default function HomePage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>(mockRestaurants);
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const { user, logout } = useAuth();
 
   const handleSearch = async (filters: SearchFilters) => {
     setIsLoading(true);
@@ -81,9 +84,20 @@ export default function HomePage() {
           <h1 className="text-2xl font-bold text-amber-500">Tabelogo</h1>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="ghost" className="text-zinc-300 hover:text-white">
-            Login
-          </Button>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <span className="text-zinc-300 text-sm hidden sm:inline-block">Hi, {user.username}</span>
+              <Button variant="ghost" className="text-zinc-300 hover:text-white" onClick={() => logout()}>
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <Link href="/auth/login">
+              <Button variant="ghost" className="text-zinc-300 hover:text-white">
+                Login
+              </Button>
+            </Link>
+          )}
         </div>
       </nav>
 

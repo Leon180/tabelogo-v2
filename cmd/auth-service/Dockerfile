@@ -35,11 +35,14 @@ WORKDIR /app/cmd/auth-service
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off \
     go build -ldflags="-w -s" -o /app/bin/auth-service .
 
+# Install golang-migrate for database migrations
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
 # Runtime stage
 FROM alpine:3.19
 
-# Install ca-certificates for HTTPS
-RUN apk --no-cache add ca-certificates tzdata
+# Install runtime dependencies
+RUN apk --no-cache add ca-certificates tzdata netcat-openbsd
 
 # Create non-root user
 RUN addgroup -g 1000 appuser && \
@@ -51,8 +54,18 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/bin/auth-service .
 
+# Copy migrate binary from builder
+COPY --from=builder /go/bin/migrate .
+
+# Copy migrations
+COPY --from=builder /app/migrations/auth ./migrations/auth
+
 # Copy Swagger docs from builder (maintain directory structure)
 COPY --from=builder /app/internal/auth/docs ./internal/auth/docs
+
+# Copy entrypoint script
+COPY cmd/auth-service/entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 # Change ownership
 RUN chown -R appuser:appuser /app
@@ -67,5 +80,5 @@ EXPOSE 8080 9090
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Run the application
-CMD ["./auth-service"]
+# Run the application with entrypoint
+ENTRYPOINT ["./entrypoint.sh"]
