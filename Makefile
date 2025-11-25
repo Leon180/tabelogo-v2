@@ -26,7 +26,7 @@ help:
 	@echo "Auth Service Commands (Docker):"
 	@echo "  make auth-build      - Build Auth Service Docker Image"
 	@echo "  make auth-rebuild    - Rebuild & restart Auth Service (with tests)"
-	@echo "  make auth-up         - Start Auth Service (Port 18080/19090)"
+	@echo "  make auth-up         - Start Auth Service (Port 8080/50051)"
 	@echo "  make auth-down       - Stop Auth Service"
 	@echo "  make auth-restart    - Restart Auth Service"
 	@echo "  make auth-logs       - View Auth Service logs"
@@ -185,8 +185,8 @@ auth-up:
 	@echo "=> Starting Auth Service..."
 	@docker-compose -f deployments/docker-compose/auth-service.yml up -d
 	@echo "=> Auth Service started"
-	@echo "=> HTTP API: http://localhost:18080"
-	@echo "=> gRPC API: localhost:19090"
+	@echo "=> HTTP API: http://localhost:8080"
+	@echo "=> gRPC API: localhost:50051"
 	@echo "=> View logs: make auth-logs"
 
 ## auth-down: Stop Auth Service
@@ -234,7 +234,7 @@ swagger-auth:
 	swag init --generalInfo cmd/auth-service/main.go --output internal/auth/docs --parseDependency --parseInternal
 	@echo "=> Auth Service Swagger docs generated at internal/auth/docs/"
 	@echo "=> Local Dev: http://localhost:8081/auth-service/swagger/index.html"
-	@echo "=> Docker: http://localhost:18080/auth-service/swagger/index.html"
+	@echo "=> Docker: http://localhost:8080/auth-service/swagger/index.html"
 
 ## auth-dev: Run Auth Service locally with auto Swagger generation
 auth-dev:

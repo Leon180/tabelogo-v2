@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, User } from '@/types/user';
 
-const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:8081';
+const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:8080';
 
 const authClient = axios.create({
     baseURL: AUTH_SERVICE_URL,
@@ -23,7 +23,7 @@ authClient.interceptors.request.use((config) => {
  * Register a new user
  */
 export async function register(data: RegisterRequest): Promise<User> {
-    const response = await authClient.post('/register', data);
+    const response = await authClient.post('/api/v1/auth/register', data);
     return response.data;
 }
 
@@ -31,7 +31,7 @@ export async function register(data: RegisterRequest): Promise<User> {
  * Login user
  */
 export async function login(data: LoginRequest): Promise<AuthResponse> {
-    const response = await authClient.post('/login', data);
+    const response = await authClient.post('/api/v1/auth/login', data);
 
     // Store tokens
     if (response.data.access_token) {
@@ -55,9 +55,7 @@ export async function logout(): Promise<void> {
  */
 export async function validateToken(): Promise<User | null> {
     try {
-        const response = await authClient.post('/validate_token', {
-            access_token: localStorage.getItem('access_token'),
-        });
+        const response = await authClient.get('/api/v1/auth/validate');
         return response.data;
     } catch (error) {
         return null;

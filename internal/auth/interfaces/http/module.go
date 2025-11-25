@@ -29,6 +29,22 @@ func NewHTTPServer() *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(gin.Logger())
+
+	// CORS middleware - must be before routes
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	})
+
 	return router
 }
 
@@ -43,6 +59,20 @@ func RegisterRoutes(
 	// Register auth routes
 	authGroup := router.Group("/api/v1/auth")
 	{
+		// Handle OPTIONS for CORS preflight - must match each specific route
+		authGroup.OPTIONS("/register", func(c *gin.Context) {
+			c.Status(http.StatusNoContent)
+		})
+		authGroup.OPTIONS("/login", func(c *gin.Context) {
+			c.Status(http.StatusNoContent)
+		})
+		authGroup.OPTIONS("/refresh", func(c *gin.Context) {
+			c.Status(http.StatusNoContent)
+		})
+		authGroup.OPTIONS("/validate", func(c *gin.Context) {
+			c.Status(http.StatusNoContent)
+		})
+
 		authGroup.POST("/register", handler.Register)
 		authGroup.POST("/login", handler.Login)
 		authGroup.POST("/refresh", handler.RefreshToken)

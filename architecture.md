@@ -43,6 +43,15 @@
 - **Cache**: Redis 7+
 - **並發控制**: Goroutines、Channels、Context
 
+### 3.3 前端架構
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: TailwindCSS v4 + Shadcn/UI
+- **Maps**: @vis.gl/react-google-maps
+- **State**: React Query (Server State), React Hooks (Local State)
+- **Design Pattern**: Map-First Interface
+
+
 ---
 
 ## 4. 資料層設計
@@ -1108,9 +1117,12 @@ internal/restaurant/
   - [x] gRPC Server 實作
   - [x] JWT 簽發與驗證
   - [x] RBAC 權限管理
-- [ ] frontend 開發
-  - [ ] 參考舊版前端 ui 設計完整開發流程
-  - [ ] 待定
+- [/] Frontend 開發
+  - [x] 專案初始化 (Next.js 16, TailwindCSS, Shadcn/UI)
+  - [x] Map-First 介面實作 (Google Maps 整合)
+  - [x] 進階搜尋 UI
+  - [ ] API 整合 (Auth, Restaurant, Booking)
+  - [ ] 頁面開發 (Login, Profile, Restaurant Details)
 - [ ] Restaurant Service 開發
   - [ ] Domain Layer: Restaurant Aggregate
   - [ ] gRPC Server 實作
