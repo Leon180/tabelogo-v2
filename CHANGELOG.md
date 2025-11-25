@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.4.1...tabelogo-v2-v0.5.0) (2025-11-25)
+
+
+### Features
+
+* implement user authentication with login UI and CORS support ([59db989](https://github.com/Leon180/tabelogo-v2/commit/59db989597c75d5406652cf0284a3aea88a7ef26))
+
 ## [0.4.1](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.4.0...tabelogo-v2-v0.4.1) (2025-11-24)
 
 
