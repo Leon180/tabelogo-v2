@@ -38,8 +38,11 @@ export default function LoginPage() {
         try {
             await login(data);
         } catch (err: any) {
-            console.error(err);
-            setError(err.response?.data?.error || 'Failed to login. Please check your credentials.');
+            // Extract error message from response or use default
+            const errorMessage = err.response?.data?.error
+                || err.response?.data?.message
+                || 'Failed to login. Please check your credentials.';
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }

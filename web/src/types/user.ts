@@ -1,10 +1,9 @@
-// User and authentication types
+// User and authentication types (matches backend UserResponse)
 export interface User {
     id: string;
     email: string;
     username: string;
     role: 'admin' | 'user' | 'guest';
-    is_active: boolean;
     email_verified: boolean;
     created_at: string;
 }
@@ -20,9 +19,15 @@ export interface RegisterRequest {
     username: string;
 }
 
+// Matches backend LoginResponse
 export interface AuthResponse {
     access_token: string;
     refresh_token: string;
-    user_id: string;
-    username: string;
+    user: User;
+}
+
+// Matches backend ValidateTokenResponse
+export interface ValidateTokenResponse {
+    valid: boolean;
+    user?: User;
 }

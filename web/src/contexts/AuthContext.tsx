@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/lib/api/auth-service';
 import type { User, LoginRequest, RegisterRequest } from '@/types/user';
@@ -8,6 +8,7 @@ import type { User, LoginRequest, RegisterRequest } from '@/types/user';
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
+    isAuthenticated: boolean;
     login: (data: LoginRequest) => Promise<void>;
     register: (data: RegisterRequest) => Promise<void>;
     logout: () => Promise<void>;
@@ -20,11 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    const checkAuth = async () => {
+    const checkAuth = useCallback(async () => {
         try {
             const token = localStorage.getItem('access_token');
             if (token) {
@@ -32,24 +29,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(userData);
             }
         } catch (error) {
-            console.error('Auth check failed:', error);
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
+            // Auth check failed, clear invalid tokens
+            await authService.logout();
+            setUser(null);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        checkAuth();
+    }, [checkAuth]);
 
     const login = async (data: LoginRequest) => {
         try {
             const response = await authService.login(data);
-            // After login, validate token to get full user details if needed, 
-            // or use the user data from response if available.
-            // The AuthResponse has user_id and username, but User type has more fields.
-            // Let's fetch full user profile or construct it.
-            // For now, let's try to validate token to get the User object.
-            const userData = await authService.validateToken();
-            setUser(userData);
+            // Use user data directly from login response (no need to validate again)
+            setUser(response.user);
             router.push('/');
         } catch (error) {
             throw error;
@@ -73,12 +69,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             router.push('/auth/login');
         } catch (error) {
-            console.error('Logout failed:', error);
+            // Logout failed, but still clear user state
+            setUser(null);
         }
     };
 
+    const isAuthenticated = !!user;
+
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, isLoading, isAuthenticated, login, register, logout }}>
             {children}
         </AuthContext.Provider>
     );
