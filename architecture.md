@@ -1149,8 +1149,40 @@ internal/restaurant/
 - [ ] Mail Service 開發
   - [ ] 監聽 Kafka 事件
   - [ ] SMTP 郵件發送
-- [ ] Map Service 開發
-  - [ ] Google Maps API 整合
+- [x] Map Service 開發 ✅ **Phase 4 完成 (2025-11-29)**
+  - [x] Phase 1: 基礎架構建立
+    - [x] DDD 分層架構 (Domain, Application, Infrastructure, Interfaces)
+    - [x] Uber FX 依賴注入
+    - [x] Redis 連接與配置
+    - [x] HTTP Server 設置 (Gin)
+    - [x] Health Check 端點
+  - [x] Phase 2: Quick Search 功能
+    - [x] Google Places API (New) 客戶端
+    - [x] Redis 緩存層 (Cache-first 策略)
+    - [x] Quick Search Use Case (業務邏輯)
+    - [x] HTTP Handler 實作
+    - [x] 完整錯誤處理與日誌
+    - [x] 性能測試通過 (50倍速度提升)
+  - [x] Phase 3: Advance Search 功能
+    - [x] Text Search API 整合
+    - [x] 搜索結果過濾 (min_rating, open_now)
+    - [x] 地理位置搜索 (Rectangle location bias)
+    - [x] 排序偏好 (DISTANCE, RELEVANCE)
+    - [x] 多語言支援 (en, ja, zh-TW)
+    - [x] 性能測試通過 (~400ms)
+  - [x] Phase 4: 優化與監控
+    - [x] Prometheus Metrics 整合
+      - [x] HTTP 請求監控 (計數器、延遲直方圖)
+      - [x] Google API 調用追蹤
+      - [x] Cache 命中率監控
+      - [x] /metrics 端點
+    - [x] Rate Limiting
+      - [x] Redis-backed 分佈式限流
+      - [x] Quick Search: 60 requests/min
+      - [x] Advance Search: 30 requests/min
+      - [x] 429 錯誤響應與 retry_after
+    - [ ] Enhanced Health Check (未來優化)
+    - [ ] 生產環境配置 (未來優化)
 
 ### Phase 4: 監控、測試與優化 (Week 10-11)
 - [ ] 可觀測性建置
