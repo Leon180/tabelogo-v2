@@ -5,67 +5,46 @@ import { GoogleMap } from '@/components/Map/GoogleMap';
 import { AdvanceSearchForm } from '@/components/Search/AdvanceSearchForm';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
-import type { Restaurant } from '@/types/restaurant';
-import type { SearchFilters } from '@/types/search';
+import type { Place } from '@/types/search';
+import type { MapBounds } from '@/hooks/useMapSearch';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Mock data for initial development
-const mockRestaurants: Restaurant[] = [
-  {
-    id: '1',
-    name: 'Sukiyabashi Jiro',
-    source: 'google',
-    external_id: 'ChIJ...',
-    address: 'Tokyo, Ginza',
-    latitude: 35.6708,
-    longitude: 139.7634,
-    rating: 4.8,
-    price_range: '$$$$',
-    cuisine_type: 'Sushi',
-  },
-  {
-    id: '2',
-    name: 'Narisawa',
-    source: 'google',
-    external_id: 'ChIJ...',
-    address: 'Tokyo, Minato',
-    latitude: 35.6654,
-    longitude: 139.7236,
-    rating: 4.7,
-    price_range: '$$$$',
-    cuisine_type: 'French-Japanese',
-  },
-];
-
 export default function HomePage() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>(mockRestaurants);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { user, logout } = useAuth();
 
-  const handleSearch = async (filters: SearchFilters) => {
-    setIsLoading(true);
-    try {
-      // TODO: Call advance search API
-      console.log('Search filters:', filters);
-      // const results = await mapService.advanceSearch({...});
-      // setRestaurants(results);
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSearchResults = (results: Place[]) => {
+    console.log('📍 Received search results:', results);
+    setPlaces(results);
+    setErrorMessage(null);
   };
 
-  const handleMarkerClick = (restaurant: Restaurant) => {
-    console.log('Marker clicked:', restaurant);
-    // TODO: Show restaurant details or navigate to detail page
+  const handleSearchError = (error: Error) => {
+    console.error('🚨 Search error:', error);
+    setErrorMessage(error.message);
+    // Clear error after 5 seconds
+    setTimeout(() => setErrorMessage(null), 5000);
+  };
+
+  const handleMarkerClick = (place: any) => {
+    console.log('Marker clicked:', place);
+    // TODO: Show place details modal with Quick Search
   };
 
   const handleBoundsChanged = (bounds: google.maps.LatLngBounds) => {
-    // TODO: Update search area based on map bounds
-    console.log('Map bounds changed:', bounds.toJSON());
+    const boundsJson = bounds.toJSON();
+    const mapBounds: MapBounds = {
+      north: boundsJson.north,
+      south: boundsJson.south,
+      east: boundsJson.east,
+      west: boundsJson.west,
+    };
+    setMapBounds(mapBounds);
+    console.log('🗺️ Map bounds updated:', mapBounds);
   };
 
   return (
@@ -101,6 +80,14 @@ export default function HomePage() {
         </div>
       </nav>
 
+      {/* Error Toast */}
+      {errorMessage && (
+        <div className="fixed top-20 right-4 z-50 p-4 bg-red-500/90 text-white rounded-lg shadow-lg max-w-md">
+          <p className="font-medium">❌ Error</p>
+          <p className="text-sm mt-1">{errorMessage}</p>
+        </div>
+      )}
+
       {/* Main Content: Search Panel + Map */}
       <div className="flex flex-1 overflow-hidden">
         {/* Search Panel (Sidebar) */}
@@ -117,27 +104,42 @@ export default function HomePage() {
             <div>
               <h2 className="text-xl font-semibold text-white mb-4">Search Restaurants</h2>
               <p className="text-sm text-zinc-400 mb-6">
-                Use the form below to search for restaurants, or click on markers on the map.
+                Search for restaurants using the Map Service API. Results will appear on the map.
               </p>
             </div>
 
-            <AdvanceSearchForm onSearch={handleSearch} isLoading={isLoading} />
+            <AdvanceSearchForm
+              mapBounds={mapBounds}
+              onResults={handleSearchResults}
+              onError={handleSearchError}
+            />
 
             <div className="pt-6 border-t border-zinc-800">
               <h3 className="text-sm font-medium text-zinc-400 mb-2">Quick Tips</h3>
               <ul className="text-sm text-zinc-500 space-y-1">
-                <li>• Click markers on the map for quick info</li>
-                <li>• Pan the map to explore different areas</li>
-                <li>• Use filters to refine your search</li>
+                <li>• Pan the map to set search area</li>
+                <li>• Enter a search query (e.g., "sushi Tokyo")</li>
+                <li>• Use filters to refine results</li>
+                <li>• Click markers for details</li>
               </ul>
             </div>
+
+            {/* Results Summary */}
+            {places.length > 0 && (
+              <div className="pt-6 border-t border-zinc-800">
+                <h3 className="text-sm font-medium text-zinc-400 mb-2">Results</h3>
+                <p className="text-sm text-zinc-300">
+                  Showing {places.length} restaurant{places.length !== 1 ? 's' : ''} on the map
+                </p>
+              </div>
+            )}
           </div>
         </aside>
 
         {/* Map Container */}
         <main className="flex-1 relative">
           <GoogleMap
-            restaurants={restaurants}
+            places={places}
             onMarkerClick={handleMarkerClick}
             onBoundsChanged={handleBoundsChanged}
           />
