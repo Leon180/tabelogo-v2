@@ -1,6 +1,6 @@
 'use client';
 
-import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, Marker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Place } from '@/types/search';
 
@@ -11,6 +11,36 @@ interface GoogleMapProps {
     selectedPlaceId?: string;
     onMarkerClick?: (place: Place) => void;
     onBoundsChanged?: (bounds: google.maps.LatLngBounds) => void;
+    onPoiClick?: (placeId: string) => void; // New: Handle POI clicks
+}
+
+// Internal component to handle POI clicks using useMap hook
+function PoiClickHandler({ onPoiClick }: { onPoiClick?: (placeId: string) => void }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!map || !onPoiClick) return;
+
+        // Add click listener to the map
+        const listener = map.addListener('click', (event: any) => {
+            // Check if a POI was clicked (placeId exists in the event)
+            if (event.placeId) {
+                // Prevent default info window
+                if (event.stop) {
+                    event.stop();
+                }
+                // Trigger Quick Search
+                onPoiClick(event.placeId);
+            }
+        });
+
+        // Cleanup listener on unmount
+        return () => {
+            google.maps.event.removeListener(listener);
+        };
+    }, [map, onPoiClick]);
+
+    return null;
 }
 
 export function GoogleMap({
@@ -23,6 +53,7 @@ export function GoogleMap({
     selectedPlaceId,
     onMarkerClick,
     onBoundsChanged,
+    onPoiClick,
 }: GoogleMapProps) {
     const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -74,6 +105,9 @@ export function GoogleMap({
                 className="w-full h-full"
                 onBoundsChanged={({ map }) => handleMapBoundsChanged(map)}
             >
+                {/* POI Click Handler */}
+                <PoiClickHandler onPoiClick={onPoiClick} />
+
                 {/* Render place markers */}
                 {places
                     .filter((place) => place.location) // Only render places with valid location

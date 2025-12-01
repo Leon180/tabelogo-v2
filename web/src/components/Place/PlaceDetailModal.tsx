@@ -1,0 +1,216 @@
+'use client';
+
+import { useEffect } from 'react';
+import { X, MapPin, Star, DollarSign, Clock, Phone, Globe, ExternalLink } from 'lucide-react';
+import Image from 'next/image';
+import { useQuickSearch } from '@/hooks/useMapSearch';
+import { getPlacePhotoUrl, getPlaceholderImageUrl } from '@/lib/utils/getPlacePhotoUrl';
+import type { Place } from '@/types/search';
+
+interface PlaceDetailModalProps {
+  placeId: string;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalProps) {
+  const { data, isLoading, error } = useQuickSearch(
+    isOpen ? { place_id: placeId, language_code: 'en' } : null
+  );
+
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const place = data?.result;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      {/* Modal Container */}
+      <div className="relative w-full max-w-4xl max-h-[90vh] bg-zinc-900 rounded-xl shadow-2xl overflow-hidden">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-2 bg-zinc-800/90 hover:bg-zinc-700 rounded-full transition-colors"
+        >
+          <X className="w-5 h-5 text-white" />
+        </button>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[90vh]">
+          {isLoading && (
+            <div className="p-12 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500" />
+            </div>
+          )}
+
+          {error && (
+            <div className="p-12 text-center">
+              <p className="text-red-400 mb-2">Failed to load place details</p>
+              <p className="text-zinc-500 text-sm">{error.message}</p>
+            </div>
+          )}
+
+          {place && (
+            <>
+              {/* Photo Gallery */}
+              <div className="relative w-full h-96 bg-zinc-800">
+                {place.photos && place.photos.length > 0 ? (
+                  <Image
+                    src={getPlacePhotoUrl(place.photos[0].name, 800, 600)}
+                    alt={place.displayName?.text || 'Restaurant'}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 800px"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-zinc-800">
+                    <p className="text-zinc-500">No Image Available</p>
+                  </div>
+                )}
+
+                {/* Cache Badge */}
+                {data?.source === 'redis' && (
+                  <div className="absolute top-4 left-4 px-3 py-1 bg-green-500/90 text-white text-xs font-medium rounded-full">
+                    ⚡ Cached
+                  </div>
+                )}
+              </div>
+
+              {/* Details Section */}
+              <div className="p-6 space-y-6">
+                {/* Title & Rating */}
+                <div>
+                  <h2 className="text-3xl font-bold text-white mb-2">
+                    {place.displayName?.text || 'Unknown Place'}
+                  </h2>
+
+                  {place.rating && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                        <span className="text-xl font-semibold text-white">{place.rating.toFixed(1)}</span>
+                      </div>
+                      {place.userRatingCount && (
+                        <span className="text-zinc-400">({place.userRatingCount} reviews)</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Info Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Price Level */}
+                  {place.priceLevel && place.priceLevel !== 'PRICE_LEVEL_UNSPECIFIED' && (
+                    <div className="flex items-start gap-3 p-4 bg-zinc-800/50 rounded-lg">
+                      <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-zinc-400">Price Level</p>
+                        <p className="text-white font-medium">
+                          {place.priceLevel.replace('PRICE_LEVEL_', '').replace('_', ' ')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Opening Hours */}
+                  {place.currentOpeningHours && (
+                    <div className="flex items-start gap-3 p-4 bg-zinc-800/50 rounded-lg">
+                      <Clock className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-zinc-400">Status</p>
+                        <p className={`font-medium ${place.currentOpeningHours.openNow ? 'text-green-500' : 'text-red-500'}`}>
+                          {place.currentOpeningHours.openNow ? 'Open Now' : 'Closed'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Address */}
+                  {place.formattedAddress && (
+                    <div className="flex items-start gap-3 p-4 bg-zinc-800/50 rounded-lg md:col-span-2">
+                      <MapPin className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-zinc-400">Address</p>
+                        <p className="text-white">{place.formattedAddress}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Phone */}
+                  {place.nationalPhoneNumber && (
+                    <div className="flex items-start gap-3 p-4 bg-zinc-800/50 rounded-lg">
+                      <Phone className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-zinc-400">Phone</p>
+                        <a href={`tel:${place.nationalPhoneNumber}`} className="text-white hover:text-amber-500">
+                          {place.nationalPhoneNumber}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Website */}
+                  {place.websiteUri && (
+                    <div className="flex items-start gap-3 p-4 bg-zinc-800/50 rounded-lg">
+                      <Globe className="w-5 h-5 text-cyan-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-zinc-400">Website</p>
+                        <a
+                          href={place.websiteUri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-white hover:text-amber-500 flex items-center gap-1"
+                        >
+                          Visit Website <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Opening Hours Details */}
+                {place.currentOpeningHours?.weekdayDescriptions && (
+                  <div className="p-4 bg-zinc-800/50 rounded-lg">
+                    <h3 className="text-white font-semibold mb-3">Opening Hours</h3>
+                    <div className="space-y-1">
+                      {place.currentOpeningHours.weekdayDescriptions.map((hours, index) => (
+                        <p key={index} className="text-sm text-zinc-300">{hours}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Google Maps Link */}
+                {place.googleMapsUri && (
+                  <a
+                    href={place.googleMapsUri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full py-3 px-4 bg-amber-500 hover:bg-amber-600 text-white font-medium text-center rounded-lg transition-colors"
+                  >
+                    View on Google Maps
+                  </a>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

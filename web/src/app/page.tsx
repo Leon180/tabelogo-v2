@@ -5,6 +5,7 @@ import { GoogleMap } from '@/components/Map/GoogleMap';
 import { AdvanceSearchForm } from '@/components/Search/AdvanceSearchForm';
 import { CollapsibleSearchPanel } from '@/components/Search/CollapsibleSearchPanel';
 import { PlaceList } from '@/components/Place/PlaceList';
+import { PlaceDetailModal } from '@/components/Place/PlaceDetailModal';
 import { ResizableSidebar } from '@/components/ui/resizable-sidebar';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
@@ -20,6 +21,7 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [detailModalPlaceId, setDetailModalPlaceId] = useState<string | null>(null);
   const { user, logout } = useAuth();
 
   const handleSearchResults = (results: Place[]) => {
@@ -38,6 +40,7 @@ export default function HomePage() {
 
   const handlePlaceClick = (place: Place) => {
     setSelectedPlaceId(place.id);
+    setDetailModalPlaceId(place.id); // Open detail modal
     // Close search panel on mobile when place is selected
     if (window.innerWidth < 1024) {
       setIsSearchPanelOpen(false);
@@ -46,7 +49,12 @@ export default function HomePage() {
 
   const handleMarkerClick = (place: Place) => {
     setSelectedPlaceId(place.id);
-    // TODO: Show place details modal with Quick Search
+    setDetailModalPlaceId(place.id); // Open detail modal
+  };
+
+  const handlePoiClick = (placeId: string) => {
+    // When user clicks a restaurant POI on the map, open detail modal with Quick Search
+    setDetailModalPlaceId(placeId);
   };
 
   const handleBoundsChanged = (bounds: google.maps.LatLngBounds) => {
@@ -166,10 +174,20 @@ export default function HomePage() {
             places={places}
             selectedPlaceId={selectedPlaceId || undefined}
             onMarkerClick={handleMarkerClick}
+            onPoiClick={handlePoiClick}
             onBoundsChanged={handleBoundsChanged}
           />
         </main>
       </div>
+
+      {/* Place Detail Modal */}
+      {detailModalPlaceId && (
+        <PlaceDetailModal
+          placeId={detailModalPlaceId}
+          isOpen={!!detailModalPlaceId}
+          onClose={() => setDetailModalPlaceId(null)}
+        />
+      )}
     </div>
   );
 }
