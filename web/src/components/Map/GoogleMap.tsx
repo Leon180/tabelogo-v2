@@ -1,13 +1,14 @@
 'use client';
 
 import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Place } from '@/types/search';
 
 interface GoogleMapProps {
     places: Place[];
     center?: { lat: number; lng: number };
     zoom?: number;
+    selectedPlaceId?: string;
     onMarkerClick?: (place: Place) => void;
     onBoundsChanged?: (bounds: google.maps.LatLngBounds) => void;
 }
@@ -19,11 +20,28 @@ export function GoogleMap({
         lng: Number(process.env.NEXT_PUBLIC_DEFAULT_LNG) || 139.6503,
     },
     zoom = 13,
+    selectedPlaceId,
     onMarkerClick,
     onBoundsChanged,
 }: GoogleMapProps) {
     const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+    const mapRef = useRef<google.maps.Map | null>(null);
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+    // Center map on selected place when selectedPlaceId changes
+    useEffect(() => {
+        if (selectedPlaceId && mapRef.current) {
+            const place = places.find(p => p.id === selectedPlaceId);
+            if (place?.location) {
+                const newCenter = {
+                    lat: place.location.latitude,
+                    lng: place.location.longitude,
+                };
+                mapRef.current.panTo(newCenter);
+                mapRef.current.setZoom(16); // Zoom in when selecting a place
+            }
+        }
+    }, [selectedPlaceId, places]);
 
     const handleMarkerClick = useCallback((place: Place) => {
         setSelectedPlace(place);
@@ -31,6 +49,8 @@ export function GoogleMap({
     }, [onMarkerClick]);
 
     const handleMapBoundsChanged = useCallback((map: google.maps.Map) => {
+        // Store map reference for centering control
+        mapRef.current = map;
         const bounds = map.getBounds();
         if (bounds) {
             onBoundsChanged?.(bounds);
@@ -57,13 +77,25 @@ export function GoogleMap({
                 {/* Render place markers */}
                 {places
                     .filter((place) => place.location) // Only render places with valid location
-                    .map((place) => (
-                        <Marker
-                            key={place.id}
-                            position={{ lat: place.location!.latitude, lng: place.location!.longitude }}
-                            onClick={() => handleMarkerClick(place)}
-                        />
-                    ))}
+                    .map((place) => {
+                        const isSelected = place.id === selectedPlaceId;
+                        return (
+                            <Marker
+                                key={place.id}
+                                position={{ lat: place.location!.latitude, lng: place.location!.longitude }}
+                                onClick={() => handleMarkerClick(place)}
+                                // Highlight selected marker with different styling
+                                icon={isSelected ? {
+                                    path: google.maps.SymbolPath.CIRCLE,
+                                    scale: 10,
+                                    fillColor: '#f59e0b', // amber-500
+                                    fillOpacity: 1,
+                                    strokeColor: '#ffffff',
+                                    strokeWeight: 2,
+                                } : undefined}
+                            />
+                        );
+                    })}
 
                 {/* Show info window for selected place */}
                 {selectedPlace && selectedPlace.location && (

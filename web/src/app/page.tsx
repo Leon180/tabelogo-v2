@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { GoogleMap } from '@/components/Map/GoogleMap';
 import { AdvanceSearchForm } from '@/components/Search/AdvanceSearchForm';
+import { CollapsibleSearchPanel } from '@/components/Search/CollapsibleSearchPanel';
+import { PlaceList } from '@/components/Place/PlaceList';
+import { ResizableSidebar } from '@/components/ui/resizable-sidebar';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import type { Place } from '@/types/search';
@@ -15,23 +18,34 @@ export default function HomePage() {
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   const { user, logout } = useAuth();
 
   const handleSearchResults = (results: Place[]) => {
-    console.log('📍 Received search results:', results);
     setPlaces(results);
     setErrorMessage(null);
+    setIsSearching(false);
+    setSelectedPlaceId(null); // Clear selection on new search
   };
 
   const handleSearchError = (error: Error) => {
-    console.error('🚨 Search error:', error);
     setErrorMessage(error.message);
+    setIsSearching(false);
     // Clear error after 5 seconds
     setTimeout(() => setErrorMessage(null), 5000);
   };
 
-  const handleMarkerClick = (place: any) => {
-    console.log('Marker clicked:', place);
+  const handlePlaceClick = (place: Place) => {
+    setSelectedPlaceId(place.id);
+    // Close search panel on mobile when place is selected
+    if (window.innerWidth < 1024) {
+      setIsSearchPanelOpen(false);
+    }
+  };
+
+  const handleMarkerClick = (place: Place) => {
+    setSelectedPlaceId(place.id);
     // TODO: Show place details modal with Quick Search
   };
 
@@ -88,58 +102,69 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Main Content: Search Panel + Map */}
+      {/* Main Content: Resizable Search Panel + Map */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Search Panel (Sidebar) */}
-        <aside
+        {/* Resizable Sidebar */}
+        <ResizableSidebar
+          defaultWidth={384}
+          minWidth={320}
+          maxWidth={600}
           className={`
             ${isSearchPanelOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:translate-x-0 transition-transform duration-300
-            w-full lg:w-96 bg-zinc-900 border-r border-zinc-800
-            overflow-y-auto p-6
+            bg-zinc-900
             absolute lg:relative h-full z-10
+            flex flex-col
           `}
         >
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold text-white mb-4">Search Restaurants</h2>
-              <p className="text-sm text-zinc-400 mb-6">
-                Search for restaurants using the Map Service API. Results will appear on the map.
-              </p>
-            </div>
+          {/* Floating Search Panel */}
+          <div className="p-4">
+            <CollapsibleSearchPanel title="Search Filters" defaultExpanded={true}>
+              <div className="pt-4 space-y-4">
+                <AdvanceSearchForm
+                  mapBounds={mapBounds}
+                  onResults={handleSearchResults}
+                  onError={handleSearchError}
+                />
+              </div>
+            </CollapsibleSearchPanel>
+          </div>
 
-            <AdvanceSearchForm
-              mapBounds={mapBounds}
-              onResults={handleSearchResults}
-              onError={handleSearchError}
-            />
-
-            <div className="pt-6 border-t border-zinc-800">
-              <h3 className="text-sm font-medium text-zinc-400 mb-2">Quick Tips</h3>
-              <ul className="text-sm text-zinc-500 space-y-1">
-                <li>• Pan the map to set search area</li>
-                <li>• Enter a search query (e.g., "sushi Tokyo")</li>
-                <li>• Use filters to refine results</li>
-                <li>• Click markers for details</li>
-              </ul>
-            </div>
-
-            {/* Results Summary */}
-            {places.length > 0 && (
-              <div className="pt-6 border-t border-zinc-800">
-                <h3 className="text-sm font-medium text-zinc-400 mb-2">Results</h3>
-                <p className="text-sm text-zinc-300">
-                  Showing {places.length} restaurant{places.length !== 1 ? 's' : ''} on the map
-                </p>
+          {/* Restaurant List */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+            {places.length > 0 ? (
+              <div>
+                <h3 className="text-sm font-medium text-zinc-400 mb-4 px-2">
+                  Showing {places.length} restaurant{places.length !== 1 ? 's' : ''}
+                </h3>
+                <PlaceList
+                  places={places}
+                  selectedPlaceId={selectedPlaceId || undefined}
+                  onPlaceClick={handlePlaceClick}
+                  isLoading={isSearching}
+                />
+              </div>
+            ) : (
+              <div className="px-2 pt-4">
+                <div className="bg-zinc-800/50 rounded-lg border border-zinc-700 p-6">
+                  <h3 className="text-sm font-medium text-zinc-400 mb-2">Quick Tips</h3>
+                  <ul className="text-sm text-zinc-500 space-y-1">
+                    <li>• Pan the map to set search area</li>
+                    <li>• Enter a search query (e.g., "sushi Tokyo")</li>
+                    <li>• Use filters to refine results</li>
+                    <li>• Click cards to center map</li>
+                  </ul>
+                </div>
               </div>
             )}
           </div>
-        </aside>
+        </ResizableSidebar>
 
         {/* Map Container */}
         <main className="flex-1 relative">
           <GoogleMap
             places={places}
+            selectedPlaceId={selectedPlaceId || undefined}
             onMarkerClick={handleMarkerClick}
             onBoundsChanged={handleBoundsChanged}
           />
