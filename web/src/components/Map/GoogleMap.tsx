@@ -55,16 +55,18 @@ export function GoogleMap({
                 onBoundsChanged={({ map }) => handleMapBoundsChanged(map)}
             >
                 {/* Render place markers */}
-                {places.map((place) => (
-                    <Marker
-                        key={place.id}
-                        position={{ lat: place.location.latitude, lng: place.location.longitude }}
-                        onClick={() => handleMarkerClick(place)}
-                    />
-                ))}
+                {places
+                    .filter((place) => place.location) // Only render places with valid location
+                    .map((place) => (
+                        <Marker
+                            key={place.id}
+                            position={{ lat: place.location!.latitude, lng: place.location!.longitude }}
+                            onClick={() => handleMarkerClick(place)}
+                        />
+                    ))}
 
                 {/* Show info window for selected place */}
-                {selectedPlace && (
+                {selectedPlace && selectedPlace.location && (
                     <InfoWindow
                         position={{
                             lat: selectedPlace.location.latitude,
