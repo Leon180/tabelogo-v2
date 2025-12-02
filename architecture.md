@@ -1111,27 +1111,57 @@ internal/restaurant/
   - [x] pkg/middleware - HTTP 中間件 (7 個完整中間件)
   - [x] 完整單元測試與文檔
 
-### Phase 2: 核心服務開發 (Week 3-6)
-- [x] Auth Service 開發
-  - [x] Domain Layer: User Aggregate
-  - [x] gRPC Server 實作
-  - [x] JWT 簽發與驗證
+### Phase 2: 核心服務開發 (Week 3-6) ✅ **80% 完成 (2025-12-02)**
+- [x] **Auth Service 開發** ✅ **完成 (2025-11-20)**
+  - [x] Domain Layer: User Aggregate, Token Model
+  - [x] Application Layer: Service with JWT logic
+  - [x] Infrastructure Layer: PostgreSQL + Redis repositories
+  - [x] gRPC Server 實作 (Login, Register, ValidateToken)
+  - [x] HTTP REST API (Swagger 文檔)
+  - [x] JWT 簽發與驗證 (Access + Refresh Token)
   - [x] RBAC 權限管理
-- [/] Frontend 開發
-  - [x] 專案初始化 (Next.js 16, TailwindCSS, Shadcn/UI)
-  - [x] Map-First 介面實作 (Google Maps 整合)
-  - [x] 進階搜尋 UI
-  - [ ] API 整合 (Auth, Restaurant, Booking)
-  - [ ] 頁面開發 (Login, Profile, Restaurant Details)
-- [ ] Restaurant Service 開發
+  - [x] Uber FX 依賴注入
+  - [x] Docker 容器化 (獨立 auth_db on port 15432)
+  - [x] 完整單元測試
+  - [x] Swagger UI 整合 (http://localhost:18080/swagger)
+  
+- [/] **Frontend 開發** ✅ **60% 完成 (2025-11-30)**
+  - [x] 專案初始化 (Next.js 16, TailwindCSS v4, Shadcn/UI)
+  - [x] Map-First 介面實作 (@vis.gl/react-google-maps)
+  - [x] 進階搜尋 UI (AdvanceSearchForm component)
+  - [x] 地圖標記與互動 (GoogleMap component)
+  - [x] 響應式設計 (Dark mode, Sidebar navigation)
+  - [x] TypeScript 類型定義 (Place, SearchFilters)
+  - [x] React Query 狀態管理準備
+  - [/] **API 整合** (進行中)
+    - [x] Map Service 整合 (useMapSearch hook)
+    - [ ] Auth Service 整合 (AuthContext 已建立但未連接)
+    - [ ] Restaurant Service 整合 (待實作)
+  - [ ] **頁面開發**
+    - [x] 主頁 (Map + Search)
+    - [/] Login/Register 頁面 (UI 已建立，待 API 連接)
+    - [ ] Restaurant Details 頁面
+    - [ ] User Profile 頁面
+    - [ ] Booking 頁面
+  
+- [ ] **Restaurant Service 開發** ⚠️ **未開始**
   - [ ] Domain Layer: Restaurant Aggregate
+  - [ ] Application Layer: Use Cases
+  - [ ] Infrastructure Layer: PostgreSQL repository
   - [ ] gRPC Server 實作
-  - [ ] CRUD API
-  - [ ] 搜尋功能（基礎）
-- [ ] API Gateway 實作
-  - [ ] 路由設定
-  - [ ] gRPC 轉 HTTP
-  - [ ] 認證 Middleware
+  - [ ] HTTP REST API
+  - [ ] CRUD API (Create, Read, Update, Delete)
+  - [ ] 搜尋功能 (基礎文字搜尋)
+  - [ ] 收藏功能 (user_favorites 表)
+  - [ ] Docker 容器化
+  
+- [ ] **API Gateway 實作** ⚠️ **未開始**
+  - [ ] 路由設定 (Gin router)
+  - [ ] gRPC 轉 HTTP (grpc-gateway)
+  - [ ] 認證 Middleware (JWT 驗證)
+  - [ ] Rate Limiting
+  - [ ] CORS 設定
+  - [ ] 請求日誌與監控
 
 ### Phase 3: 整合服務與事件驅動 (Week 7-9)
 - [ ] Kafka 整合
