@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.5.0...tabelogo-v2-v0.6.0) (2025-12-02)
+
+
+### Features
+
+* **frontend:** add Quick Search modal and POI click functionality ([0a8d038](https://github.com/Leon180/tabelogo-v2/commit/0a8d0385f2c13bccdb20ef6680ec3d8fc923ccfa))
+* **frontend:** add restaurant list view with resizable sidebar and collapsible search ([390cc4b](https://github.com/Leon180/tabelogo-v2/commit/390cc4b3fc4f73ae825d4c0795f7f3ea56997166))
+* **frontend:** integrate Map Service with React Query and TypeScript ([65e1a4c](https://github.com/Leon180/tabelogo-v2/commit/65e1a4c7f4f144c11f646dc53360f392e7c03c08))
+* init plan ([e3eb7d2](https://github.com/Leon180/tabelogo-v2/commit/e3eb7d21d6632c3dc46c64bf336a497d7357d6f2))
+* **map-service:** implement complete Map Service with Phase 1-4 ([c4670ee](https://github.com/Leon180/tabelogo-v2/commit/c4670ee0675de81ae24e8a0bfec132ff5489079a))
+
+
+### Bug Fixes
+
+* add null checks for place.location in GoogleMap component ([9f09c3d](https://github.com/Leon180/tabelogo-v2/commit/9f09c3d2af0a9e57646c29c4318d55b82c69b978))
+
 ## [0.5.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.4.1...tabelogo-v2-v0.5.0) (2025-11-25)
 
 
