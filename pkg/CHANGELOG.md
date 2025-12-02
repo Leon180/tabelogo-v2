@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.3.0...tabelogo-v2/pkg-v0.4.0) (2025-12-02)
+
+
+### Features
+
+* **map-service:** implement complete Map Service with Phase 1-4 ([c4670ee](https://github.com/Leon180/tabelogo-v2/commit/c4670ee0675de81ae24e8a0bfec132ff5489079a))
+
 ## [0.3.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.2.0...tabelogo-v2/pkg-v0.3.0) (2025-11-24)
 
 
