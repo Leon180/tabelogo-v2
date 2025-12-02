@@ -4,8 +4,8 @@ Create a `.env.local` file in the `web/` directory with the following variables:
 
 ```bash
 # API Service URLs
-NEXT_PUBLIC_MAP_SERVICE_URL=http://localhost:8080
-NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8081
+NEXT_PUBLIC_MAP_SERVICE_URL=http://localhost:8081
+NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:18080
 NEXT_PUBLIC_RESTAURANT_SERVICE_URL=http://localhost:8082
 NEXT_PUBLIC_BOOKING_SERVICE_URL=http://localhost:8083
 

@@ -3,69 +3,70 @@
 import { useState } from 'react';
 import { GoogleMap } from '@/components/Map/GoogleMap';
 import { AdvanceSearchForm } from '@/components/Search/AdvanceSearchForm';
+import { CollapsibleSearchPanel } from '@/components/Search/CollapsibleSearchPanel';
+import { PlaceList } from '@/components/Place/PlaceList';
+import { PlaceDetailModal } from '@/components/Place/PlaceDetailModal';
+import { ResizableSidebar } from '@/components/ui/resizable-sidebar';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
-import type { Restaurant } from '@/types/restaurant';
-import type { SearchFilters } from '@/types/search';
+import type { Place } from '@/types/search';
+import type { MapBounds } from '@/hooks/useMapSearch';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Mock data for initial development
-const mockRestaurants: Restaurant[] = [
-  {
-    id: '1',
-    name: 'Sukiyabashi Jiro',
-    source: 'google',
-    external_id: 'ChIJ...',
-    address: 'Tokyo, Ginza',
-    latitude: 35.6708,
-    longitude: 139.7634,
-    rating: 4.8,
-    price_range: '$$$$',
-    cuisine_type: 'Sushi',
-  },
-  {
-    id: '2',
-    name: 'Narisawa',
-    source: 'google',
-    external_id: 'ChIJ...',
-    address: 'Tokyo, Minato',
-    latitude: 35.6654,
-    longitude: 139.7236,
-    rating: 4.7,
-    price_range: '$$$$',
-    cuisine_type: 'French-Japanese',
-  },
-];
-
 export default function HomePage() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>(mockRestaurants);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [detailModalPlaceId, setDetailModalPlaceId] = useState<string | null>(null);
   const { user, logout } = useAuth();
 
-  const handleSearch = async (filters: SearchFilters) => {
-    setIsLoading(true);
-    try {
-      // TODO: Call advance search API
-      console.log('Search filters:', filters);
-      // const results = await mapService.advanceSearch({...});
-      // setRestaurants(results);
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setIsLoading(false);
+  const handleSearchResults = (results: Place[]) => {
+    setPlaces(results);
+    setErrorMessage(null);
+    setIsSearching(false);
+    setSelectedPlaceId(null); // Clear selection on new search
+  };
+
+  const handleSearchError = (error: Error) => {
+    setErrorMessage(error.message);
+    setIsSearching(false);
+    // Clear error after 5 seconds
+    setTimeout(() => setErrorMessage(null), 5000);
+  };
+
+  const handlePlaceClick = (place: Place) => {
+    setSelectedPlaceId(place.id);
+    setDetailModalPlaceId(place.id); // Open detail modal
+    // Close search panel on mobile when place is selected
+    if (window.innerWidth < 1024) {
+      setIsSearchPanelOpen(false);
     }
   };
 
-  const handleMarkerClick = (restaurant: Restaurant) => {
-    console.log('Marker clicked:', restaurant);
-    // TODO: Show restaurant details or navigate to detail page
+  const handleMarkerClick = (place: Place) => {
+    setSelectedPlaceId(place.id);
+    setDetailModalPlaceId(place.id); // Open detail modal
+  };
+
+  const handlePoiClick = (placeId: string) => {
+    // When user clicks a restaurant POI on the map, open detail modal with Quick Search
+    setDetailModalPlaceId(placeId);
   };
 
   const handleBoundsChanged = (bounds: google.maps.LatLngBounds) => {
-    // TODO: Update search area based on map bounds
-    console.log('Map bounds changed:', bounds.toJSON());
+    const boundsJson = bounds.toJSON();
+    const mapBounds: MapBounds = {
+      north: boundsJson.north,
+      south: boundsJson.south,
+      east: boundsJson.east,
+      west: boundsJson.west,
+    };
+    setMapBounds(mapBounds);
+    console.log('🗺️ Map bounds updated:', mapBounds);
   };
 
   return (
@@ -101,48 +102,92 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Main Content: Search Panel + Map */}
+      {/* Error Toast */}
+      {errorMessage && (
+        <div className="fixed top-20 right-4 z-50 p-4 bg-red-500/90 text-white rounded-lg shadow-lg max-w-md">
+          <p className="font-medium">❌ Error</p>
+          <p className="text-sm mt-1">{errorMessage}</p>
+        </div>
+      )}
+
+      {/* Main Content: Resizable Search Panel + Map */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Search Panel (Sidebar) */}
-        <aside
+        {/* Resizable Sidebar */}
+        <ResizableSidebar
+          defaultWidth={384}
+          minWidth={320}
+          maxWidth={600}
           className={`
             ${isSearchPanelOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:translate-x-0 transition-transform duration-300
-            w-full lg:w-96 bg-zinc-900 border-r border-zinc-800
-            overflow-y-auto p-6
+            bg-zinc-900
             absolute lg:relative h-full z-10
+            flex flex-col
           `}
         >
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold text-white mb-4">Search Restaurants</h2>
-              <p className="text-sm text-zinc-400 mb-6">
-                Use the form below to search for restaurants, or click on markers on the map.
-              </p>
-            </div>
-
-            <AdvanceSearchForm onSearch={handleSearch} isLoading={isLoading} />
-
-            <div className="pt-6 border-t border-zinc-800">
-              <h3 className="text-sm font-medium text-zinc-400 mb-2">Quick Tips</h3>
-              <ul className="text-sm text-zinc-500 space-y-1">
-                <li>• Click markers on the map for quick info</li>
-                <li>• Pan the map to explore different areas</li>
-                <li>• Use filters to refine your search</li>
-              </ul>
-            </div>
+          {/* Floating Search Panel */}
+          <div className="p-4">
+            <CollapsibleSearchPanel title="Search Filters" defaultExpanded={true}>
+              <div className="pt-4 space-y-4">
+                <AdvanceSearchForm
+                  mapBounds={mapBounds}
+                  onResults={handleSearchResults}
+                  onError={handleSearchError}
+                />
+              </div>
+            </CollapsibleSearchPanel>
           </div>
-        </aside>
+
+          {/* Restaurant List */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+            {places.length > 0 ? (
+              <div>
+                <h3 className="text-sm font-medium text-zinc-400 mb-4 px-2">
+                  Showing {places.length} restaurant{places.length !== 1 ? 's' : ''}
+                </h3>
+                <PlaceList
+                  places={places}
+                  selectedPlaceId={selectedPlaceId || undefined}
+                  onPlaceClick={handlePlaceClick}
+                  isLoading={isSearching}
+                />
+              </div>
+            ) : (
+              <div className="px-2 pt-4">
+                <div className="bg-zinc-800/50 rounded-lg border border-zinc-700 p-6">
+                  <h3 className="text-sm font-medium text-zinc-400 mb-2">Quick Tips</h3>
+                  <ul className="text-sm text-zinc-500 space-y-1">
+                    <li>• Pan the map to set search area</li>
+                    <li>• Enter a search query (e.g., "sushi Tokyo")</li>
+                    <li>• Use filters to refine results</li>
+                    <li>• Click cards to center map</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        </ResizableSidebar>
 
         {/* Map Container */}
         <main className="flex-1 relative">
           <GoogleMap
-            restaurants={restaurants}
+            places={places}
+            selectedPlaceId={selectedPlaceId || undefined}
             onMarkerClick={handleMarkerClick}
+            onPoiClick={handlePoiClick}
             onBoundsChanged={handleBoundsChanged}
           />
         </main>
       </div>
+
+      {/* Place Detail Modal */}
+      {detailModalPlaceId && (
+        <PlaceDetailModal
+          placeId={detailModalPlaceId}
+          isOpen={!!detailModalPlaceId}
+          onClose={() => setDetailModalPlaceId(null)}
+        />
+      )}
     </div>
   );
 }
