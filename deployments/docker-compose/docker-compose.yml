@@ -158,21 +158,41 @@ services:
     networks:
       - tabelogo-network
 
-  # Restaurant Service (Placeholder - to be implemented)
-  # restaurant-service:
-  #   build:
-  #     context: .
-  #     dockerfile: cmd/restaurant-service/Dockerfile
-  #   container_name: tabelogo-restaurant-service
-  #   ports:
-  #     - "8081:8080"
-  #     - "9091:9090"
-  #   depends_on:
-  #     - postgres-restaurant
-  #     - redis
-  #     - kafka
-  #   networks:
-  #     - tabelogo-network
+  # Restaurant Service
+  restaurant-service:
+    build:
+      context: ../..
+      dockerfile: cmd/restaurant-service/Dockerfile
+    container_name: tabelogo-restaurant-service
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: info
+      SERVER_PORT: 18082
+      DB_HOST: postgres-restaurant
+      DB_PORT: 5432
+      DB_NAME: restaurant_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 1
+    ports:
+      - "18082:18082"  # HTTP
+    depends_on:
+      postgres-restaurant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:18082/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - tabelogo-network
 
   # Booking Service (Placeholder - to be implemented)
   # booking-service:

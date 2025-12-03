@@ -1,0 +1,11 @@
+# Ignore environment files with sensitive data
+.env
+.env.local
+.env.*.local
+
+# Ignore binary
+restaurant-service
+
+# Ignore test coverage
+*.out
+coverage.html

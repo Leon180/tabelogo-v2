@@ -8,6 +8,7 @@ require (
 	github.com/Leon180/tabelogo-v2/pkg v0.0.0-20251122182243-1163baec0a9d
 	github.com/gin-gonic/gin v1.11.0
 	github.com/google/uuid v1.6.0
+	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.17.0
 	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/swag v1.16.6
