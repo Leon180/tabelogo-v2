@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.6.0...tabelogo-v2-v0.7.0) (2025-12-03)
+
+
+### Features
+
+* **restaurant:** complete Restaurant Service implementation with 98% test coverage ([e831f76](https://github.com/Leon180/tabelogo-v2/commit/e831f7618112e7bd8101504b9426e50adbad0f26))
+
 ## [0.6.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.5.0...tabelogo-v2-v0.6.0) (2025-12-02)
 
 
