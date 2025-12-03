@@ -1111,7 +1111,7 @@ internal/restaurant/
   - [x] pkg/middleware - HTTP 中間件 (7 個完整中間件)
   - [x] 完整單元測試與文檔
 
-### Phase 2: 核心服務開發 (Week 3-6) ✅ **80% 完成 (2025-12-02)**
+### Phase 2: 核心服務開發 (Week 3-6) ✅ **90% 完成 (2025-12-02)**
 - [x] **Auth Service 開發** ✅ **完成 (2025-11-20)**
   - [x] Domain Layer: User Aggregate, Token Model
   - [x] Application Layer: Service with JWT logic
@@ -1144,16 +1144,22 @@ internal/restaurant/
     - [ ] User Profile 頁面
     - [ ] Booking 頁面
   
-- [ ] **Restaurant Service 開發** ⚠️ **未開始**
-  - [ ] Domain Layer: Restaurant Aggregate
-  - [ ] Application Layer: Use Cases
-  - [ ] Infrastructure Layer: PostgreSQL repository
-  - [ ] gRPC Server 實作
-  - [ ] HTTP REST API
-  - [ ] CRUD API (Create, Read, Update, Delete)
-  - [ ] 搜尋功能 (基礎文字搜尋)
-  - [ ] 收藏功能 (user_favorites 表)
-  - [ ] Docker 容器化
+- [x] **Restaurant Service 開發** ✅ **完成 (2025-12-02)**
+  - [x] Domain Layer: Restaurant & Favorite Aggregates, Location Value Object
+  - [x] Application Layer: RestaurantService (19 methods)
+  - [x] Infrastructure Layer: PostgreSQL + GORM repositories
+  - [x] Repository Pattern: RestaurantRepository, FavoriteRepository
+  - [x] HTTP REST API (6 endpoints: Create, Get, Search, AddFavorite, GetFavorites, Health)
+  - [x] CRUD API: 完整 CRUD 操作 + 去重邏輯
+  - [x] 搜尋功能: Search, FindByLocation, FindByCuisineType
+  - [x] 收藏功能: Add/Remove favorites, Tags, Visit tracking
+  - [x] 外部 ID 整合: (source, external_id) composite unique index
+  - [x] Docker 容器化 (Dockerfile + docker-compose)
+  - [x] 整合測試腳本 (test-restaurant-service.sh)
+  - [x] Uber FX 依賴注入
+  - [x] 完整文檔 (IMPLEMENTATION_SUMMARY.md)
+  - [ ] gRPC Server (未來增強)
+  - [ ] 單元測試 (待實作)
   
 - [ ] **API Gateway 實作** ⚠️ **未開始**
   - [ ] 路由設定 (Gin router)
