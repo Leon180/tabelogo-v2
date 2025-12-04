@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package restaurant.v1;
+
+option go_package = "github.com/Leon180/tabelogo-v2/api/gen/restaurant/v1;restaurantv1";
+
+import "google/protobuf/timestamp.proto";
+
+// RestaurantService provides restaurant management operations
+service RestaurantService {
+  // Restaurant operations
+  rpc CreateRestaurant(CreateRestaurantRequest) returns (CreateRestaurantResponse);
+  rpc GetRestaurant(GetRestaurantRequest) returns (GetRestaurantResponse);
+  rpc GetRestaurantByExternalID(GetRestaurantByExternalIDRequest) returns (GetRestaurantResponse);
+  rpc UpdateRestaurant(UpdateRestaurantRequest) returns (UpdateRestaurantResponse);
+  rpc DeleteRestaurant(DeleteRestaurantRequest) returns (DeleteRestaurantResponse);
+  rpc SearchRestaurants(SearchRestaurantsRequest) returns (SearchRestaurantsResponse);
+  rpc ListRestaurants(ListRestaurantsRequest) returns (ListRestaurantsResponse);
+  
+  // Favorite operations
+  rpc AddToFavorites(AddToFavoritesRequest) returns (AddToFavoritesResponse);
+  rpc RemoveFromFavorites(RemoveFromFavoritesRequest) returns (RemoveFromFavoritesResponse);
+  rpc GetUserFavorites(GetUserFavoritesRequest) returns (GetUserFavoritesResponse);
+}
+
+// Location represents geographic coordinates
+message Location {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+// Restaurant represents a restaurant entity
+message Restaurant {
+  string id = 1;
+  string name = 2;
+  string source = 3;
+  string external_id = 4;
+  string address = 5;
+  Location location = 6;
+  double rating = 7;
+  string price_range = 8;
+  string cuisine_type = 9;
+  string phone = 10;
+  string website = 11;
+  map<string, string> opening_hours = 12;
+  int64 view_count = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+// Favorite represents a user's favorite restaurant
+message Favorite {
+  string id = 1;
+  string user_id = 2;
+  string restaurant_id = 3;
+  string notes = 4;
+  repeated string tags = 5;
+  int32 visit_count = 6;
+  google.protobuf.Timestamp last_visited_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// CreateRestaurantRequest
+message CreateRestaurantRequest {
+  string name = 1;
+  string source = 2;
+  string external_id = 3;
+  string address = 4;
+  Location location = 5;
+  double rating = 6;
+  string price_range = 7;
+  string cuisine_type = 8;
+  string phone = 9;
+  string website = 10;
+}
+
+message CreateRestaurantResponse {
+  Restaurant restaurant = 1;
+}
+
+// GetRestaurantRequest
+message GetRestaurantRequest {
+  string id = 1;
+}
+
+message GetRestaurantResponse {
+  Restaurant restaurant = 1;
+}
+
+// GetRestaurantByExternalIDRequest
+message GetRestaurantByExternalIDRequest {
+  string source = 1;
+  string external_id = 2;
+}
+
+// UpdateRestaurantRequest
+message UpdateRestaurantRequest {
+  string id = 1;
+  string name = 2;
+  string address = 3;
+  double rating = 4;
+  string price_range = 5;
+  string cuisine_type = 6;
+  string phone = 7;
+  string website = 8;
+}
+
+message UpdateRestaurantResponse {
+  Restaurant restaurant = 1;
+}
+
+// DeleteRestaurantRequest
+message DeleteRestaurantRequest {
+  string id = 1;
+}
+
+message DeleteRestaurantResponse {
+  bool success = 1;
+}
+
+// SearchRestaurantsRequest
+message SearchRestaurantsRequest {
+  string query = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message SearchRestaurantsResponse {
+  repeated Restaurant restaurants = 1;
+  int32 total = 2;
+}
+
+// ListRestaurantsRequest
+message ListRestaurantsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListRestaurantsResponse {
+  repeated Restaurant restaurants = 1;
+  int32 total = 2;
+}
+
+// AddToFavoritesRequest
+message AddToFavoritesRequest {
+  string user_id = 1;
+  string restaurant_id = 2;
+}
+
+message AddToFavoritesResponse {
+  Favorite favorite = 1;
+}
+
+// RemoveFromFavoritesRequest
+message RemoveFromFavoritesRequest {
+  string user_id = 1;
+  string restaurant_id = 2;
+}
+
+message RemoveFromFavoritesResponse {
+  bool success = 1;
+}
+
+// GetUserFavoritesRequest
+message GetUserFavoritesRequest {
+  string user_id = 1;
+}
+
+message GetUserFavoritesResponse {
+  repeated Favorite favorites = 1;
+  int32 total = 2;
+}

@@ -1,0 +1,66 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Dependencies
+node_modules
+vendor
+
+# Build artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+testdata/
+coverage.txt
+*.out
+
+# Documentation (except needed ones)
+*.md
+!README.md
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Old version
+tabelogo-v1/
+
+# macOS
+.DS_Store
+
+# CI/CD
+.github/
+.circleci/
+.travis.yml
+
+# Compiled documentation (will be regenerated)
+docs/swagger.json
+docs/swagger.yaml
+internal/*/docs/
+
+# Cache
+.cache/
+*.cache

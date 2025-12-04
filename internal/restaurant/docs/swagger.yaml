@@ -1,0 +1,21 @@
+basePath: /api/v1
+host: localhost:18082
+info:
+  contact:
+    email: support@tabelogo.com
+    name: API Support
+  description: Restaurant management service for Tabelogo platform
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Restaurant Service API
+  version: "1.0"
+paths: {}
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
