@@ -1,4 +1,106 @@
 basePath: /api/v1
+definitions:
+  http.AddFavoriteRequest:
+    properties:
+      restaurant_id:
+        type: string
+      user_id:
+        type: string
+    required:
+    - restaurant_id
+    - user_id
+    type: object
+  http.CreateRestaurantRequest:
+    type: object
+  http.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  http.FavoriteDTO:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      last_visited_at:
+        type: string
+      notes:
+        type: string
+      restaurant_id:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      user_id:
+        type: string
+      visit_count:
+        type: integer
+    type: object
+  http.FavoriteListResponse:
+    properties:
+      favorites:
+        items:
+          $ref: '#/definitions/http.FavoriteDTO'
+        type: array
+      total:
+        type: integer
+    type: object
+  http.FavoriteResponse:
+    properties:
+      favorite:
+        $ref: '#/definitions/http.FavoriteDTO'
+    type: object
+  http.RestaurantDTO:
+    properties:
+      address:
+        type: string
+      created_at:
+        type: string
+      cuisine_type:
+        type: string
+      external_id:
+        type: string
+      id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone:
+        type: string
+      price_range:
+        type: string
+      rating:
+        type: number
+      source:
+        type: string
+      updated_at:
+        type: string
+      view_count:
+        type: integer
+      website:
+        type: string
+    type: object
+  http.RestaurantListResponse:
+    properties:
+      restaurants:
+        items:
+          $ref: '#/definitions/http.RestaurantDTO'
+        type: array
+      total:
+        type: integer
+    type: object
+  http.RestaurantResponse:
+    properties:
+      restaurant:
+        $ref: '#/definitions/http.RestaurantDTO'
+    type: object
 host: localhost:18082
 info:
   contact:
@@ -11,7 +113,150 @@ info:
   termsOfService: http://swagger.io/terms/
   title: Restaurant Service API
   version: "1.0"
-paths: {}
+paths:
+  /favorites:
+    post:
+      consumes:
+      - application/json
+      description: Add a restaurant to user's favorites
+      parameters:
+      - description: Add favorite request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.AddFavoriteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.FavoriteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Add restaurant to favorites
+      tags:
+      - favorites
+  /restaurants:
+    post:
+      consumes:
+      - application/json
+      description: Create a new restaurant with details
+      parameters:
+      - description: Create restaurant request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.CreateRestaurantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.RestaurantResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Create a new restaurant
+      tags:
+      - restaurants
+  /restaurants/{id}:
+    get:
+      description: Get restaurant details by ID
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.RestaurantResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get restaurant by ID
+      tags:
+      - restaurants
+  /restaurants/search:
+    get:
+      description: Search restaurants by query string
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.RestaurantListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Search restaurants
+      tags:
+      - restaurants
+  /users/{userId}/favorites:
+    get:
+      description: Get all favorites for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.FavoriteListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get user's favorites
+      tags:
+      - favorites
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

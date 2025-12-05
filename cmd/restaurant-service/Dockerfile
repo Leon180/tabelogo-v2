@@ -23,15 +23,14 @@ RUN go install github.com/swaggo/swag/cmd/swag@latest
 WORKDIR /app
 COPY . .
 
-# Generate Swagger documentation
+# Generate Swagger documentation (run from service directory to limit scope)
+WORKDIR /app/cmd/restaurant-service
 RUN swag init \
-    --generalInfo cmd/restaurant-service/main.go \
-    --output internal/restaurant/docs \
-    --parseDependency \
-    --parseInternal
+    --generalInfo main.go \
+    --dir .,../../internal/restaurant/interfaces/http \
+    --output ../../internal/restaurant/docs
 
 # Build the application (with GOWORK=off)
-WORKDIR /app/cmd/restaurant-service
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off \
     go build -ldflags="-w -s" -o /app/bin/restaurant-service .
 

@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package map.v1;
+
+option go_package = "github.com/Leon180/tabelogo-v2/api/gen/map/v1;mapv1";
+
+// MapService provides location-based restaurant search functionality
+// using Google Places API
+service MapService {
+  // QuickSearch performs a quick search for a place by Place ID
+  rpc QuickSearch(QuickSearchRequest) returns (QuickSearchResponse);
+  
+  // AdvanceSearch performs an advanced text-based search with filters
+  rpc AdvanceSearch(AdvanceSearchRequest) returns (AdvanceSearchResponse);
+  
+  // BatchGetPlaces retrieves multiple places by their Place IDs
+  // Used for batch synchronization with Restaurant Service
+  rpc BatchGetPlaces(BatchGetPlacesRequest) returns (BatchGetPlacesResponse);
+}
+
+// QuickSearchRequest - Request for quick place lookup by ID
+message QuickSearchRequest {
+  string place_id = 1;       // Google Place ID
+  string language_code = 2;  // Language code: en, ja, zh-TW
+  string api_mask = 3;       // Optional field mask for API response
+}
+
+// QuickSearchResponse - Response containing place details
+message QuickSearchResponse {
+  string source = 1;          // Data source: "google", "cache"
+  int64 cached_at = 2;        // Unix timestamp when cached (0 if not cached)
+  Place place = 3;            // Place details
+}
+
+// AdvanceSearchRequest - Request for advanced text-based search
+message AdvanceSearchRequest {
+  string text_query = 1;           // Search query text
+  LocationBias location_bias = 2;  // Geographic bias for search
+  int32 max_result_count = 3;      // Maximum results (1-20)
+  double min_rating = 4;           // Minimum rating filter (0-5)
+  bool open_now = 5;               // Filter for currently open places
+  string rank_preference = 6;      // Ranking: "DISTANCE" or "RELEVANCE"
+  string language_code = 7;        // Language code: en, ja, zh-TW
+  string api_mask = 8;             // Optional field mask for API response
+}
+
+// AdvanceSearchResponse - Response containing search results
+message AdvanceSearchResponse {
+  repeated Place places = 1;       // List of matching places
+  int32 total_count = 2;           // Total number of results
+  SearchMetadata metadata = 3;     // Search metadata
+}
+
+// BatchGetPlacesRequest - Request for batch place retrieval
+message BatchGetPlacesRequest {
+  repeated string place_ids = 1;   // List of Google Place IDs
+  string language_code = 2;        // Language code: en, ja, zh-TW
+  string api_mask = 3;             // Optional field mask for API response
+}
+
+// BatchGetPlacesResponse - Response containing multiple places
+message BatchGetPlacesResponse {
+  repeated Place places = 1;       // List of places
+  int32 success_count = 2;         // Number of successfully retrieved places
+  int32 failed_count = 3;          // Number of failed retrievals
+}
+
+// Place - Represents a restaurant/place from Google Places API
+message Place {
+  string id = 1;                   // Google Place ID
+  string name = 2;                 // Place name
+  string formatted_address = 3;    // Full formatted address
+  Location location = 4;           // Geographic coordinates
+  double rating = 5;               // Average rating (0-5)
+  int32 user_ratings_total = 6;    // Total number of ratings
+  string price_level = 7;          // Price level indicator
+  repeated string types = 8;       // Place types/categories
+  string business_status = 9;      // Business status
+  string phone_number = 10;        // Phone number
+  string website = 11;             // Website URL
+  OpeningHours opening_hours = 12; // Opening hours information
+  repeated Photo photos = 13;      // Place photos
+  string editorial_summary = 14;   // Editorial summary
+}
+
+// Location - Geographic coordinates
+message Location {
+  double latitude = 1;   // Latitude (-90 to 90)
+  double longitude = 2;  // Longitude (-180 to 180)
+}
+
+// LocationBias - Geographic bias for search
+message LocationBias {
+  Rectangle rectangle = 1;  // Rectangular area
+}
+
+// Rectangle - Rectangular geographic area
+message Rectangle {
+  Coordinates low = 1;   // Southwest corner
+  Coordinates high = 2;  // Northeast corner
+}
+
+// Coordinates - Geographic coordinates
+message Coordinates {
+  double latitude = 1;   // Latitude (-90 to 90)
+  double longitude = 2;  // Longitude (-180 to 180)
+}
+
+// OpeningHours - Business opening hours
+message OpeningHours {
+  bool open_now = 1;                    // Currently open
+  repeated string weekday_text = 2;     // Formatted opening hours text
+}
+
+// Photo - Place photo reference
+message Photo {
+  string name = 1;           // Photo reference name
+  int32 width_px = 2;        // Photo width in pixels
+  int32 height_px = 3;       // Photo height in pixels
+}
+
+// SearchMetadata - Metadata about search operation
+message SearchMetadata {
+  string text_query = 1;     // Original search query
+  int64 search_time_ms = 2;  // Search duration in milliseconds
+}

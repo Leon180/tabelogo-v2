@@ -2,7 +2,7 @@
 
 # Variables
 DOCKER_COMPOSE = docker-compose -f deployments/docker-compose/docker-compose.yml
-SERVICES = auth-service restaurant-service booking-service spider-service mail-service map-service api-gateway
+SERVICES = auth-service restaurant-service map-service
 
 ## help: Show this help message
 help:
@@ -81,7 +81,7 @@ build:
 	@echo "=> Building all microservices..."
 	@for service in $(SERVICES); do \
 		echo "Building $$service..."; \
-		cd cmd/$$service && go build -o ../../bin/$$service . && cd ../..; \
+		cd cmd/$$service && GOWORK=off go build -o ../../bin/$$service . && cd ../..; \
 	done
 	@echo "=> Build complete"
 

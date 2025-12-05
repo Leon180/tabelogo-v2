@@ -1,0 +1,227 @@
+basePath: /api/v1
+definitions:
+  http.AdvanceSearchRequest:
+    properties:
+      api_mask:
+        type: string
+      language_code:
+        enum:
+        - en
+        - ja
+        - zh-TW
+        type: string
+      location_bias:
+        $ref: '#/definitions/http.LocationBias'
+      max_result_count:
+        maximum: 20
+        minimum: 1
+        type: integer
+      min_rating:
+        maximum: 5
+        minimum: 0
+        type: number
+      open_now:
+        type: boolean
+      rank_preference:
+        enum:
+        - DISTANCE
+        - RELEVANCE
+        type: string
+      text_query:
+        type: string
+    required:
+    - language_code
+    - location_bias
+    - max_result_count
+    - rank_preference
+    - text_query
+    type: object
+  http.AdvanceSearchResponse:
+    properties:
+      places:
+        items: {}
+        type: array
+      search_metadata:
+        $ref: '#/definitions/http.SearchMetadata'
+      total_count:
+        type: integer
+    type: object
+  http.Coordinates:
+    properties:
+      latitude:
+        maximum: 90
+        minimum: -90
+        type: number
+      longitude:
+        maximum: 180
+        minimum: -180
+        type: number
+    required:
+    - latitude
+    - longitude
+    type: object
+  http.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      error:
+        type: string
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  http.HealthCheckResponse:
+    properties:
+      dependencies:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+      version:
+        type: string
+    type: object
+  http.LocationBias:
+    properties:
+      rectangle:
+        $ref: '#/definitions/http.Rectangle'
+    required:
+    - rectangle
+    type: object
+  http.QuickSearchRequest:
+    properties:
+      api_mask:
+        type: string
+      language_code:
+        enum:
+        - en
+        - ja
+        - zh-TW
+        type: string
+      place_id:
+        type: string
+    required:
+    - language_code
+    - place_id
+    type: object
+  http.QuickSearchResponse:
+    properties:
+      cached_at:
+        type: string
+      result: {}
+      source:
+        type: string
+    type: object
+  http.Rectangle:
+    properties:
+      high:
+        $ref: '#/definitions/http.Coordinates'
+      low:
+        $ref: '#/definitions/http.Coordinates'
+    required:
+    - high
+    - low
+    type: object
+  http.SearchMetadata:
+    properties:
+      search_time_ms:
+        type: integer
+      text_query:
+        type: string
+    type: object
+host: localhost:8081
+info:
+  contact:
+    email: support@tabelogo.com
+    name: API Support
+  description: Map service providing Google Maps API integration for Tabelogo platform
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Tabelogo Map Service API
+  version: "1.0"
+paths:
+  /api/v1/map/advance_search:
+    post:
+      consumes:
+      - application/json
+      description: Search for places using text query and filters
+      parameters:
+      - description: Advance search request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.AdvanceSearchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.AdvanceSearchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Advance search for places
+      tags:
+      - map
+  /api/v1/map/quick_search:
+    post:
+      consumes:
+      - application/json
+      description: Get place details by place ID
+      parameters:
+      - description: Quick search request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.QuickSearchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.QuickSearchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Quick search for a place
+      tags:
+      - map
+  /health:
+    get:
+      description: Check if the service is healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.HealthCheckResponse'
+      summary: Health check
+      tags:
+      - health
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

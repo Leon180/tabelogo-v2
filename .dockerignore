@@ -56,10 +56,14 @@ tabelogo-v1/
 .circleci/
 .travis.yml
 
-# Compiled documentation (will be regenerated)
-docs/swagger.json
-docs/swagger.yaml
-internal/*/docs/
+# Compiled documentation (will be regenerated in Docker)
+# Note: We need to include internal/*/docs/ for Swagger in Docker builds
+# docs/swagger.json
+# docs/swagger.yaml
+# internal/*/docs/
+
+# API generated code (must be included)
+!api/gen/
 
 # Cache
 .cache/
