@@ -179,6 +179,10 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 1
+      # Map Service Integration
+      MAP_SERVICE_GRPC_ADDR: "map-service:19083"
+      MAP_SERVICE_TIMEOUT: "10s"
+      DATA_FRESHNESS_TTL: "259200s" # 3 days
       JWT_SECRET: change-me-in-production-must-be-at-least-32-characters-long
       JWT_ACCESS_TOKEN_EXPIRE: 15m
       JWT_REFRESH_TOKEN_EXPIRE: 168h

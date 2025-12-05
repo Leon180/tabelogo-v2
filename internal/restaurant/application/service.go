@@ -2,7 +2,10 @@ package application
 
 import (
 	"context"
+	"time"
 
+	mapv1 "github.com/Leon180/tabelogo-v2/api/gen/map/v1"
+	"github.com/Leon180/tabelogo-v2/internal/restaurant/application/converters"
 	domainerrors "github.com/Leon180/tabelogo-v2/internal/restaurant/domain/errors"
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/domain/model"
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/domain/repository"
@@ -24,6 +27,9 @@ type RestaurantService interface {
 	FindRestaurantsByCuisineType(ctx context.Context, cuisineType string, limit, offset int) ([]*model.Restaurant, error)
 	IncrementRestaurantViewCount(ctx context.Context, id uuid.UUID) error
 
+	// Map Service integration - Quick search by Google Place ID
+	QuickSearchByPlaceID(ctx context.Context, placeID string) (*model.Restaurant, error)
+
 	// Favorite operations
 	AddToFavorites(ctx context.Context, userID, restaurantID uuid.UUID) (*model.Favorite, error)
 	RemoveFromFavorites(ctx context.Context, userID, restaurantID uuid.UUID) error
@@ -39,18 +45,34 @@ type RestaurantService interface {
 type restaurantService struct {
 	restaurantRepo repository.RestaurantRepository
 	favoriteRepo   repository.FavoriteRepository
+	mapClient      MapServiceClient // Map Service gRPC client
+	config         *Config          // Configuration for TTL, etc.
 	logger         *zap.Logger
+}
+
+// MapServiceClient defines the interface for Map Service gRPC client
+type MapServiceClient interface {
+	QuickSearch(ctx context.Context, placeID string) (*mapv1.Place, error)
+}
+
+// Config holds service configuration
+type Config struct {
+	DataFreshnessTTL time.Duration
 }
 
 // NewRestaurantService creates a new restaurant service
 func NewRestaurantService(
 	restaurantRepo repository.RestaurantRepository,
 	favoriteRepo repository.FavoriteRepository,
+	mapClient MapServiceClient,
+	config *Config,
 	logger *zap.Logger,
 ) RestaurantService {
 	return &restaurantService{
 		restaurantRepo: restaurantRepo,
 		favoriteRepo:   favoriteRepo,
+		mapClient:      mapClient,
+		config:         config,
 		logger:         logger,
 	}
 }
@@ -225,6 +247,107 @@ func (s *restaurantService) IncrementRestaurantViewCount(ctx context.Context, id
 	}
 
 	return nil
+}
+
+// QuickSearchByPlaceID implements cache-first search by Google Place ID
+// 1. Check local DB first (cache hit)
+// 2. If not found or stale, call Map Service
+// 3. Save/update result in local DB
+// 4. Return restaurant
+func (s *restaurantService) QuickSearchByPlaceID(ctx context.Context, placeID string) (*model.Restaurant, error) {
+	// Step 1: Try to find in local DB (cache hit)
+	restaurant, err := s.restaurantRepo.FindByExternalID(ctx, model.SourceGoogle, placeID)
+	
+	// Check if we have fresh data
+	if err == nil && restaurant != nil {
+		// Check data freshness
+		if time.Since(restaurant.UpdatedAt()) < s.config.DataFreshnessTTL {
+			s.logger.Info("Cache hit - returning fresh data",
+				zap.String("place_id", placeID),
+				zap.Duration("age", time.Since(restaurant.UpdatedAt())),
+			)
+			return restaurant, nil
+		}
+		s.logger.Info("Cache hit but data is stale, refreshing from Map Service",
+			zap.String("place_id", placeID),
+			zap.Duration("age", time.Since(restaurant.UpdatedAt())),
+		)
+	} else {
+		s.logger.Info("Cache miss - fetching from Map Service",
+			zap.String("place_id", placeID),
+		)
+	}
+
+	// Step 2: Cache miss or stale data - call Map Service
+	place, err := s.mapClient.QuickSearch(ctx, placeID)
+	if err != nil {
+		// If Map Service fails and we have stale data, return it with a warning
+		if restaurant != nil {
+			s.logger.Warn("Map Service failed, returning stale data",
+				zap.String("place_id", placeID),
+				zap.Error(err),
+			)
+			return restaurant, nil
+		}
+		// No cached data and Map Service failed
+		s.logger.Error("Map Service failed and no cached data available",
+			zap.String("place_id", placeID),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	// Step 3: Convert Map Service proto to domain model
+	newRestaurant := converters.MapPlaceToRestaurant(place)
+	if newRestaurant == nil {
+		return nil, domainerrors.ErrRestaurantNotFound
+	}
+
+	// Step 4: Save or update in local DB
+	if restaurant == nil {
+		// Create new restaurant
+		if err := s.restaurantRepo.Create(ctx, newRestaurant); err != nil {
+			s.logger.Error("Failed to save restaurant from Map Service",
+				zap.String("place_id", placeID),
+				zap.Error(err),
+			)
+			// Return the data anyway, even if save failed
+			return newRestaurant, nil
+		}
+		s.logger.Info("Saved new restaurant from Map Service",
+			zap.String("place_id", placeID),
+			zap.String("name", newRestaurant.Name()),
+		)
+	} else {
+		// Update existing restaurant with fresh data
+		restaurant.UpdateDetails(
+			newRestaurant.Name(),
+			newRestaurant.Address(),
+			newRestaurant.PriceRange(),
+			newRestaurant.CuisineType(),
+			newRestaurant.Phone(),
+			newRestaurant.Website(),
+		)
+		restaurant.UpdateRating(newRestaurant.Rating())
+		if newRestaurant.Location() != nil {
+			restaurant.UpdateLocation(newRestaurant.Location())
+		}
+
+		if err := s.restaurantRepo.Update(ctx, restaurant); err != nil {
+			s.logger.Error("Failed to update restaurant from Map Service",
+				zap.String("place_id", placeID),
+				zap.Error(err),
+			)
+		} else {
+			s.logger.Info("Updated restaurant from Map Service",
+				zap.String("place_id", placeID),
+				zap.String("name", restaurant.Name()),
+			)
+		}
+		return restaurant, nil
+	}
+
+	return newRestaurant, nil
 }
 
 // Favorite operations
