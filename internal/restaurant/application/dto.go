@@ -1,5 +1,3 @@
-//go:build go1.23
-
 package application
 
 import "github.com/Leon180/tabelogo-v2/internal/restaurant/domain/model"
