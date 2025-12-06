@@ -162,12 +162,53 @@ test-integration:
 test-all: test-unit test-integration
 	@echo "=> All tests complete"
 
-## test-coverage: Run tests and generate coverage report
+##.PHONY: test
+test:
+	@echo "Running tests..."
+	go test -v -race ./...
+
+.PHONY: test-coverage
 test-coverage:
-	@echo "=> Generating test coverage report..."
-	@go test -v -coverprofile=coverage.out ./internal/auth/...
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "=> Coverage report generated: coverage.html"
+	@echo "Running tests with coverage..."
+	go test -v -race -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+
+# Mock generation
+.PHONY: generate-mocks
+generate-mocks:
+	@echo "Generating mocks..."
+	@mkdir -p internal/restaurant/mocks
+	mockgen -source=internal/restaurant/domain/repository/restaurant_repository.go \
+		-destination=internal/restaurant/mocks/mock_restaurant_repository.go \
+		-package=mocks
+	mockgen -source=internal/restaurant/domain/repository/favorite_repository.go \
+		-destination=internal/restaurant/mocks/mock_favorite_repository.go \
+		-package=mocks
+	mockgen -source=internal/restaurant/application/service.go \
+		-destination=internal/restaurant/mocks/mock_map_service_client.go \
+		-package=mocks \
+		-self_package=github.com/Leon180/tabelogo-v2/internal/restaurant/application \
+		MapServiceClient
+	@echo "✅ Mocks generated in internal/restaurant/mocks/"
+
+.PHONY: test-with-mocks
+test-with-mocks: generate-mocks
+	@echo "Running tests with generated mocks..."
+	cd internal/restaurant/application && go test -v -cover
+
+.PHONY: clean-mocks
+clean-mocks:
+	@echo "Cleaning generated mocks..."
+	rm -rf internal/restaurant/mocks
+	@echo "✅ Mocks cleaned"
+
+.PHONY: clean
+clean: clean-mocks
+	@echo "Cleaning build artifacts..."
+	rm -f coverage.out coverage.html
+	rm -rf bin/
+	@echo "✅ Clean complete"
 
 ## auth-build: Build Auth Service Docker Image
 auth-build:
