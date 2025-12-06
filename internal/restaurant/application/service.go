@@ -9,6 +9,7 @@ import (
 	domainerrors "github.com/Leon180/tabelogo-v2/internal/restaurant/domain/errors"
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/domain/model"
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/domain/repository"
+	"github.com/Leon180/tabelogo-v2/pkg/metrics"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -257,11 +258,12 @@ func (s *restaurantService) IncrementRestaurantViewCount(ctx context.Context, id
 func (s *restaurantService) QuickSearchByPlaceID(ctx context.Context, placeID string) (*model.Restaurant, error) {
 	// Step 1: Try to find in local DB (cache hit)
 	restaurant, err := s.restaurantRepo.FindByExternalID(ctx, model.SourceGoogle, placeID)
-	
+
 	// Check if we have fresh data
 	if err == nil && restaurant != nil {
 		// Check data freshness
 		if time.Since(restaurant.UpdatedAt()) < s.config.DataFreshnessTTL {
+			metrics.RestaurantCacheHitsTotal.Inc() // METRIC: Cache hit
 			s.logger.Info("Cache hit - returning fresh data",
 				zap.String("place_id", placeID),
 				zap.Duration("age", time.Since(restaurant.UpdatedAt())),
@@ -273,16 +275,21 @@ func (s *restaurantService) QuickSearchByPlaceID(ctx context.Context, placeID st
 			zap.Duration("age", time.Since(restaurant.UpdatedAt())),
 		)
 	} else {
+		metrics.RestaurantCacheMissesTotal.Inc() // METRIC: Cache miss
 		s.logger.Info("Cache miss - fetching from Map Service",
 			zap.String("place_id", placeID),
 		)
 	}
 
 	// Step 2: Cache miss or stale data - call Map Service
+	start := time.Now()
 	place, err := s.mapClient.QuickSearch(ctx, placeID)
 	if err != nil {
+		metrics.RestaurantMapServiceCallsTotal.WithLabelValues("error").Inc() // METRIC: Map Service error
+
 		// If Map Service fails and we have stale data, return it with a warning
 		if restaurant != nil {
+			metrics.RestaurantStaleDataReturnsTotal.Inc() // METRIC: Stale data fallback
 			s.logger.Warn("Map Service failed, returning stale data",
 				zap.String("place_id", placeID),
 				zap.Error(err),
@@ -296,6 +303,9 @@ func (s *restaurantService) QuickSearchByPlaceID(ctx context.Context, placeID st
 		)
 		return nil, err
 	}
+
+	metrics.RestaurantMapServiceCallsTotal.WithLabelValues("success").Inc() // METRIC: Map Service success
+	metrics.RestaurantSyncDuration.Observe(time.Since(start).Seconds())     // METRIC: Sync duration
 
 	// Step 3: Convert Map Service proto to domain model
 	newRestaurant := converters.MapPlaceToRestaurant(place)
