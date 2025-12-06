@@ -9,8 +9,8 @@ import (
 	"github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -75,12 +75,12 @@ func RegisterRoutes(
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
-		// Restaurant routes
 		restaurants := v1.Group("/restaurants")
 		{
 			restaurants.POST("", handler.CreateRestaurant)
 			restaurants.GET("/:id", handler.GetRestaurant)
 			restaurants.GET("/search", handler.SearchRestaurants)
+			restaurants.GET("/quick-search/:place_id", handler.QuickSearchByPlaceID)
 		}
 
 		// Favorite routes

@@ -1,0 +1,335 @@
+{
+    "info": {
+        "name": "Restaurant Service API",
+        "_postman_id": "restaurant-service-v1",
+        "description": "Restaurant Service API endpoints for Tabelogo v2",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8083",
+            "type": "string"
+        },
+        {
+            "key": "apiVersion",
+            "value": "v1",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Restaurants",
+            "item": [
+                {
+                    "name": "Quick Search by Place ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/{{apiVersion}}/restaurants/quick-search/:place_id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "{{apiVersion}}",
+                                "restaurants",
+                                "quick-search",
+                                ":place_id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "place_id",
+                                    "value": "ChIJN1t_tDeuEmsRUsoyG83frY4",
+                                    "description": "Google Place ID"
+                                }
+                            ]
+                        },
+                        "description": "Search for a restaurant using Google Place ID with cache-first strategy"
+                    },
+                    "response": [
+                        {
+                            "name": "Success - Cache Hit",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{baseUrl}}/api/{{apiVersion}}/restaurants/quick-search/ChIJN1t_tDeuEmsRUsoyG83frY4",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "{{apiVersion}}",
+                                        "restaurants",
+                                        "quick-search",
+                                        "ChIJN1t_tDeuEmsRUsoyG83frY4"
+                                    ]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                },
+                                {
+                                    "key": "X-Cache-Status",
+                                    "value": "HIT"
+                                },
+                                {
+                                    "key": "X-Data-Source",
+                                    "value": "CACHE"
+                                },
+                                {
+                                    "key": "X-Data-Age",
+                                    "value": "3600s"
+                                }
+                            ],
+                            "body": "{\n  \"restaurant\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"name\": \"Sushi Dai\",\n    \"source\": \"google\",\n    \"external_id\": \"ChIJN1t_tDeuEmsRUsoyG83frY4\",\n    \"address\": \"5 Chome-2-1 Tsukiji, Chuo City, Tokyo 104-0045, Japan\",\n    \"latitude\": 35.6654,\n    \"longitude\": 139.7707,\n    \"rating\": 4.5,\n    \"price_range\": \"$$\",\n    \"cuisine_type\": \"Sushi\",\n    \"phone\": \"+81 3-1234-5678\",\n    \"website\": \"https://example.com\",\n    \"view_count\": 1523,\n    \"created_at\": \"2025-12-01T10:00:00Z\",\n    \"updated_at\": \"2025-12-06T15:30:00Z\"\n  }\n}"
+                        },
+                        {
+                            "name": "Not Found",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{baseUrl}}/api/{{apiVersion}}/restaurants/quick-search/InvalidPlaceID",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "{{apiVersion}}",
+                                        "restaurants",
+                                        "quick-search",
+                                        "InvalidPlaceID"
+                                    ]
+                                }
+                            },
+                            "status": "Not Found",
+                            "code": 404,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "{\n  \"error\": \"not_found\",\n  \"message\": \"Restaurant not found\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Restaurant by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/{{apiVersion}}/restaurants/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "{{apiVersion}}",
+                                "restaurants",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "550e8400-e29b-41d4-a716-446655440000",
+                                    "description": "Restaurant UUID"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Search Restaurants",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/{{apiVersion}}/restaurants/search?q=sushi&limit=10&offset=0",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "{{apiVersion}}",
+                                "restaurants",
+                                "search"
+                            ],
+                            "query": [
+                                {
+                                    "key": "q",
+                                    "value": "sushi",
+                                    "description": "Search query"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Restaurant",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Sushi Dai\",\n  \"source\": \"google\",\n  \"external_id\": \"ChIJN1t_tDeuEmsRUsoyG83frY4\",\n  \"address\": \"5 Chome-2-1 Tsukiji, Chuo City, Tokyo 104-0045, Japan\",\n  \"latitude\": 35.6654,\n  \"longitude\": 139.7707,\n  \"rating\": 4.5,\n  \"price_range\": \"$$\",\n  \"cuisine_type\": \"Sushi\",\n  \"phone\": \"+81 3-1234-5678\",\n  \"website\": \"https://example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/{{apiVersion}}/restaurants",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "{{apiVersion}}",
+                                "restaurants"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Favorites",
+            "item": [
+                {
+                    "name": "Add to Favorites",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"restaurant_id\": \"550e8400-e29b-41d4-a716-446655440001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/{{apiVersion}}/favorites",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "{{apiVersion}}",
+                                "favorites"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get User Favorites",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/{{apiVersion}}/users/:userId/favorites",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "{{apiVersion}}",
+                                "users",
+                                ":userId",
+                                "favorites"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "userId",
+                                    "value": "550e8400-e29b-41d4-a716-446655440000",
+                                    "description": "User UUID"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Health & Monitoring",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/health",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Prometheus Metrics",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/metrics",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "metrics"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Swagger UI",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/swagger/index.html",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "swagger",
+                                "index.html"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

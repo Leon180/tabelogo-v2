@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/application"
 	domainerrors "github.com/Leon180/tabelogo-v2/internal/restaurant/domain/errors"
@@ -60,20 +61,6 @@ func (h *RestaurantHandler) CreateRestaurant(c *gin.Context) {
 
 	restaurant, err := h.service.CreateRestaurant(c.Request.Context(), appReq)
 	if err != nil {
-		if err == domainerrors.ErrRestaurantAlreadyExists {
-			c.JSON(http.StatusConflict, ErrorResponse{
-				Error:   "restaurant_exists",
-				Message: "Restaurant already exists",
-			})
-			return
-		}
-		if err == domainerrors.ErrInvalidLocation {
-			c.JSON(http.StatusBadRequest, ErrorResponse{
-				Error:   "invalid_location",
-				Message: "Invalid location coordinates",
-			})
-			return
-		}
 		h.logger.Error("Failed to create restaurant", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
@@ -88,9 +75,10 @@ func (h *RestaurantHandler) CreateRestaurant(c *gin.Context) {
 }
 
 // GetRestaurant godoc
-// @Summary Get restaurant by ID
+// @Summary Get a restaurant by ID
 // @Description Get restaurant details by ID
 // @Tags restaurants
+// @Accept json
 // @Produce json
 // @Param id path string true "Restaurant ID"
 // @Success 200 {object} RestaurantResponse
@@ -117,6 +105,7 @@ func (h *RestaurantHandler) GetRestaurant(c *gin.Context) {
 			})
 			return
 		}
+
 		h.logger.Error("Failed to get restaurant", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
@@ -134,9 +123,10 @@ func (h *RestaurantHandler) GetRestaurant(c *gin.Context) {
 // @Summary Search restaurants
 // @Description Search restaurants by query string
 // @Tags restaurants
+// @Accept json
 // @Produce json
 // @Param q query string true "Search query"
-// @Param limit query int false "Limit" default(20)
+// @Param limit query int false "Limit" default(10)
 // @Param offset query int false "Offset" default(0)
 // @Success 200 {object} RestaurantListResponse
 // @Failure 400 {object} ErrorResponse
@@ -145,24 +135,14 @@ func (h *RestaurantHandler) SearchRestaurants(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "missing_query",
+			Error:   "invalid_query",
 			Message: "Search query is required",
 		})
 		return
 	}
 
-	limit := 20
+	limit := 10
 	offset := 0
-	if l := c.Query("limit"); l != "" {
-		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil {
-			limit = 20
-		}
-	}
-	if o := c.Query("offset"); o != "" {
-		if _, err := fmt.Sscanf(o, "%d", &offset); err != nil {
-			offset = 0
-		}
-	}
 
 	restaurants, err := h.service.SearchRestaurants(c.Request.Context(), query, limit, offset)
 	if err != nil {
@@ -189,7 +169,6 @@ func (h *RestaurantHandler) SearchRestaurants(c *gin.Context) {
 // @Param request body AddFavoriteRequest true "Add favorite request"
 // @Success 201 {object} FavoriteResponse
 // @Failure 400 {object} ErrorResponse
-// @Failure 409 {object} ErrorResponse
 // @Router /favorites [post]
 func (h *RestaurantHandler) AddToFavorites(c *gin.Context) {
 	var req AddFavoriteRequest
@@ -221,17 +200,10 @@ func (h *RestaurantHandler) AddToFavorites(c *gin.Context) {
 
 	favorite, err := h.service.AddToFavorites(c.Request.Context(), userID, restaurantID)
 	if err != nil {
-		if err == domainerrors.ErrFavoriteAlreadyExists {
-			c.JSON(http.StatusConflict, ErrorResponse{
-				Error:   "favorite_exists",
-				Message: "Already in favorites",
-			})
-			return
-		}
-		h.logger.Error("Failed to add to favorites", zap.Error(err))
+		h.logger.Error("Failed to add favorite", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
-			Message: "Failed to add to favorites",
+			Message: "Failed to add favorite",
 		})
 		return
 	}
@@ -242,9 +214,10 @@ func (h *RestaurantHandler) AddToFavorites(c *gin.Context) {
 }
 
 // GetUserFavorites godoc
-// @Summary Get user's favorites
+// @Summary Get user favorites
 // @Description Get all favorites for a user
 // @Tags favorites
+// @Accept json
 // @Produce json
 // @Param userId path string true "User ID"
 // @Success 200 {object} FavoriteListResponse
@@ -274,5 +247,94 @@ func (h *RestaurantHandler) GetUserFavorites(c *gin.Context) {
 	c.JSON(http.StatusOK, FavoriteListResponse{
 		Favorites: toFavoriteDTOList(favorites),
 		Total:     len(favorites),
+	})
+}
+
+// QuickSearchByPlaceID godoc
+// @Summary Quick search restaurant by Google Place ID
+// @Description Search for a restaurant using Google Place ID with cache-first strategy.
+// @Description This endpoint implements a cache-first approach:
+// @Description - Returns cached data if fresh (< 3 days old)
+// @Description - Falls back to Map Service if cache miss or stale
+// @Description - Returns stale data if Map Service fails (graceful degradation)
+// @Description Response headers indicate cache status and data source.
+// @Tags restaurants
+// @Accept json
+// @Produce json
+// @Param place_id path string true "Google Place ID" example("ChIJN1t_tDeuEmsRUsoyG83frY4")
+// @Success 200 {object} RestaurantResponse "Restaurant found" headers(X-Cache-Status=string,X-Data-Source=string,X-Data-Age=string)
+// @Failure 400 {object} ErrorResponse "Invalid place ID"
+// @Failure 404 {object} ErrorResponse "Restaurant not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Failure 503 {object} ErrorResponse "Map Service unavailable and no cached data"
+// @Router /restaurants/quick-search/{place_id} [get]
+func (h *RestaurantHandler) QuickSearchByPlaceID(c *gin.Context) {
+	placeID := c.Param("place_id")
+
+	// Validate place_id
+	if placeID == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "invalid_place_id",
+			Message: "Place ID is required",
+		})
+		return
+	}
+
+	// Log request
+	h.logger.Info("QuickSearchByPlaceID request",
+		zap.String("place_id", placeID),
+		zap.String("client_ip", c.ClientIP()),
+	)
+
+	// Call service
+	restaurant, err := h.service.QuickSearchByPlaceID(c.Request.Context(), placeID)
+	if err != nil {
+		h.logger.Error("QuickSearchByPlaceID failed",
+			zap.String("place_id", placeID),
+			zap.Error(err),
+		)
+
+		// Handle specific errors
+		if err == domainerrors.ErrRestaurantNotFound {
+			c.JSON(http.StatusNotFound, ErrorResponse{
+				Error:   "not_found",
+				Message: "Restaurant not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "internal_error",
+			Message: "Failed to search restaurant",
+		})
+		return
+	}
+
+	// Calculate data age
+	dataAge := time.Since(restaurant.UpdatedAt())
+	cacheStatus := "HIT"
+	dataSource := "CACHE"
+
+	// If data is very fresh (< 1 second), it's likely from Map Service
+	if dataAge < time.Second {
+		cacheStatus = "MISS"
+		dataSource = "MAP_SERVICE"
+	}
+
+	// Add cache status headers
+	c.Header("X-Cache-Status", cacheStatus)
+	c.Header("X-Data-Source", dataSource)
+	c.Header("X-Data-Age", fmt.Sprintf("%.0fs", dataAge.Seconds()))
+
+	// Log success
+	h.logger.Info("QuickSearchByPlaceID success",
+		zap.String("place_id", placeID),
+		zap.String("restaurant_id", restaurant.ID().String()),
+		zap.String("cache_status", cacheStatus),
+		zap.Float64("data_age_seconds", dataAge.Seconds()),
+	)
+
+	c.JSON(http.StatusOK, RestaurantResponse{
+		Restaurant: toRestaurantDTO(restaurant),
 	})
 }
