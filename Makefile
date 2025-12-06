@@ -185,11 +185,9 @@ generate-mocks:
 	mockgen -source=internal/restaurant/domain/repository/favorite_repository.go \
 		-destination=internal/restaurant/mocks/mock_favorite_repository.go \
 		-package=mocks
-	mockgen -source=internal/restaurant/application/service.go \
+	mockgen -source=internal/restaurant/application/map_client.go \
 		-destination=internal/restaurant/mocks/mock_map_service_client.go \
-		-package=mocks \
-		-self_package=github.com/Leon180/tabelogo-v2/internal/restaurant/application \
-		MapServiceClient
+		-package=mocks
 	@echo "✅ Mocks generated in internal/restaurant/mocks/"
 
 .PHONY: test-with-mocks
