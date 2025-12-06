@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/application/converters"
@@ -250,61 +251,100 @@ func (s *restaurantService) IncrementRestaurantViewCount(ctx context.Context, id
 // 2. If not found or stale, call Map Service
 // 3. Save/update result in local DB
 // 4. Return restaurant
+// QuickSearchByPlaceID searches for a restaurant by Google Place ID with cache-first strategy
 func (s *restaurantService) QuickSearchByPlaceID(ctx context.Context, placeID string) (*model.Restaurant, error) {
-	// Step 1: Try to find in local DB (cache hit)
+	s.logger.Info("[QuickSearch] START - Request received",
+		zap.String("place_id", placeID),
+	)
+
+	// Step 1: Try cache first
+	s.logger.Info("[QuickSearch] STEP 1 - Checking cache",
+		zap.String("place_id", placeID),
+	)
 	restaurant, err := s.restaurantRepo.FindByExternalID(ctx, model.SourceGoogle, placeID)
-
-	// Check if we have fresh data
-	if err == nil && restaurant != nil {
-		// Check data freshness
-		if time.Since(restaurant.UpdatedAt()) < s.config.DataFreshnessTTL {
-			metrics.RestaurantCacheHitsTotal.Inc() // METRIC: Cache hit
-			s.logger.Info("Cache hit - returning fresh data",
-				zap.String("place_id", placeID),
-				zap.Duration("age", time.Since(restaurant.UpdatedAt())),
-			)
-			return restaurant, nil
-		}
-		s.logger.Info("Cache hit but data is stale, refreshing from Map Service",
-			zap.String("place_id", placeID),
-			zap.Duration("age", time.Since(restaurant.UpdatedAt())),
-		)
-	} else {
-		metrics.RestaurantCacheMissesTotal.Inc() // METRIC: Cache miss
-		s.logger.Info("Cache miss - fetching from Map Service",
-			zap.String("place_id", placeID),
-		)
-	}
-
-	// Step 2: Cache miss or stale data - call Map Service
-	start := time.Now()
-	place, err := s.mapClient.QuickSearch(ctx, placeID)
-	if err != nil {
-		metrics.RestaurantMapServiceCallsTotal.WithLabelValues("error").Inc() // METRIC: Map Service error
-
-		// If Map Service fails and we have stale data, return it with a warning
-		if restaurant != nil {
-			metrics.RestaurantStaleDataReturnsTotal.Inc() // METRIC: Stale data fallback
-			s.logger.Warn("Map Service failed, returning stale data",
-				zap.String("place_id", placeID),
-				zap.Error(err),
-			)
-			return restaurant, nil
-		}
-		// No cached data and Map Service failed
-		s.logger.Error("Map Service failed and no cached data available",
+	s.logger.Info("[QuickSearch] Cache query result",
+		zap.String("place_id", placeID),
+		zap.Bool("found", restaurant != nil),
+		zap.Bool("has_error", err != nil),
+	)
+	if err != nil && err != domainerrors.ErrRestaurantNotFound {
+		s.logger.Error("[QuickSearch] ERROR - Failed to query cache",
 			zap.String("place_id", placeID),
 			zap.Error(err),
 		)
 		return nil, err
 	}
 
+	// Check if we have fresh data
+	if err == nil && restaurant != nil {
+		// Check data freshness
+		if time.Since(restaurant.UpdatedAt()) < s.config.DataFreshnessTTL {
+			metrics.RestaurantCacheHitsTotal.Inc() // METRIC: Cache hit
+			s.logger.Info("[QuickSearch] Cache hit - returning fresh data",
+				zap.String("place_id", placeID),
+				zap.Duration("age", time.Since(restaurant.UpdatedAt())),
+			)
+			return restaurant, nil
+		}
+		s.logger.Info("[QuickSearch] Cache hit but data is stale, refreshing from Map Service",
+			zap.String("place_id", placeID),
+			zap.Duration("age", time.Since(restaurant.UpdatedAt())),
+		)
+	} else {
+		metrics.RestaurantCacheMissesTotal.Inc() // METRIC: Cache miss
+		s.logger.Info("[QuickSearch] Cache miss - fetching from Map Service",
+			zap.String("place_id", placeID),
+		)
+	}
+
+	// Step 2: Cache miss or stale data - call Map Service
+	s.logger.Info("[QuickSearch] STEP 2 - Calling Map Service",
+		zap.String("place_id", placeID),
+	)
+	start := time.Now()
+	place, err := s.mapClient.QuickSearch(ctx, placeID)
+	s.logger.Info("[QuickSearch] Map Service response",
+		zap.String("place_id", placeID),
+		zap.Bool("success", err == nil),
+		zap.Bool("has_place", place != nil),
+		zap.Duration("duration", time.Since(start)),
+	)
+	if err != nil {
+		metrics.RestaurantMapServiceCallsTotal.WithLabelValues("error").Inc() // METRIC: Map Service error
+		s.logger.Error("[QuickSearch] ERROR - Map Service call failed",
+			zap.String("place_id", placeID),
+			zap.Error(err),
+		)
+
+		// If Map Service fails and we have stale data, return it with a warning
+		if restaurant != nil {
+			metrics.RestaurantStaleDataReturnsTotal.Inc() // METRIC: Stale data fallback
+			s.logger.Warn("[QuickSearch] Map Service failed, returning stale data",
+				zap.String("place_id", placeID),
+				zap.Error(err),
+			)
+			return restaurant, nil
+		}
+		// No cached data and Map Service failed
+		s.logger.Error("[QuickSearch] FATAL - Map Service failed and no cached data available",
+			zap.String("place_id", placeID),
+			zap.Error(err),
+		)
+		return nil, fmt.Errorf("map service quick search failed: %w", err)
+	}
+
 	metrics.RestaurantMapServiceCallsTotal.WithLabelValues("success").Inc() // METRIC: Map Service success
 	metrics.RestaurantSyncDuration.Observe(time.Since(start).Seconds())     // METRIC: Sync duration
 
 	// Step 3: Convert Map Service proto to domain model
+	s.logger.Info("[QuickSearch] STEP 3 - Converting Map Service response to domain model",
+		zap.String("place_id", placeID),
+	)
 	newRestaurant := converters.MapPlaceToRestaurant(place)
 	if newRestaurant == nil {
+		s.logger.Warn("[QuickSearch] Conversion from MapPlace to Restaurant returned nil",
+			zap.String("place_id", placeID),
+		)
 		return nil, domainerrors.ErrRestaurantNotFound
 	}
 

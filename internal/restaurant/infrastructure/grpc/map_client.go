@@ -36,7 +36,8 @@ func (c *MapServiceClient) QuickSearch(ctx context.Context, placeID string) (*ma
 	defer cancel()
 
 	req := &mapv1.QuickSearchRequest{
-		PlaceId: placeID,
+		PlaceId:      placeID,
+		LanguageCode: "en", // Default to English
 	}
 
 	resp, err := c.client.QuickSearch(ctx, req)

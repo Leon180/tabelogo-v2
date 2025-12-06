@@ -23,6 +23,267 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/map/advance_search": {
+            "post": {
+                "description": "Search for places using text query and filters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "map"
+                ],
+                "summary": "Advance search for places",
+                "parameters": [
+                    {
+                        "description": "Advance search request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.AdvanceSearchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.AdvanceSearchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/map/quick_search": {
+            "post": {
+                "description": "Get place details by place ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "map"
+                ],
+                "summary": "Quick search for a place",
+                "parameters": [
+                    {
+                        "description": "Quick search request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.QuickSearchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.QuickSearchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Login with email and password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "Login request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Refresh access token using refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh access token",
+                "parameters": [
+                    {
+                        "description": "Refresh token request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.RefreshTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.RefreshTokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Register a new user with email and password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "Register request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/http.RegisterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/validate": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Validate an access token",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Validate access token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ValidateTokenResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/favorites": {
             "post": {
                 "description": "Add a restaurant to user's favorites",
@@ -57,13 +318,27 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
                         }
-                    },
-                    "409": {
-                        "description": "Conflict",
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Check if the service is healthy",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/http.HealthCheckResponse"
                         }
                     }
                 }
@@ -103,13 +378,70 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/restaurants/quick-search/{place_id}": {
+            "get": {
+                "description": "Search for a restaurant using Google Place ID with cache-first strategy.\nThis endpoint implements a cache-first approach:\n- Returns cached data if fresh (\u003c 3 days old)\n- Falls back to Map Service if cache miss or stale\n- Returns stale data if Map Service fails (graceful degradation)\nResponse headers indicate cache status and data source.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "restaurants"
+                ],
+                "summary": "Quick search restaurant by Google Place ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"ChIJN1t_tDeuEmsRUsoyG83frY4\"",
+                        "description": "Google Place ID",
+                        "name": "place_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restaurant found\" headers(X-Cache-Status=string,X-Data-Source=string,X-Data-Age=string)",
+                        "schema": {
+                            "$ref": "#/definitions/http.RestaurantResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid place ID",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Restaurant not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Map Service unavailable and no cached data",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
                         }
                     }
                 }
@@ -118,6 +450,9 @@ const docTemplate = `{
         "/restaurants/search": {
             "get": {
                 "description": "Search restaurants by query string",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -135,7 +470,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 20,
+                        "default": 10,
                         "description": "Limit",
                         "name": "limit",
                         "in": "query"
@@ -158,7 +493,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
                         }
                     }
                 }
@@ -167,13 +502,16 @@ const docTemplate = `{
         "/restaurants/{id}": {
             "get": {
                 "description": "Get restaurant details by ID",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "restaurants"
                 ],
-                "summary": "Get restaurant by ID",
+                "summary": "Get a restaurant by ID",
                 "parameters": [
                     {
                         "type": "string",
@@ -193,13 +531,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
                         }
                     }
                 }
@@ -208,13 +546,16 @@ const docTemplate = `{
         "/users/{userId}/favorites": {
             "get": {
                 "description": "Get all favorites for a user",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "favorites"
                 ],
-                "summary": "Get user's favorites",
+                "summary": "Get user favorites",
                 "parameters": [
                     {
                         "type": "string",
@@ -234,7 +575,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse"
                         }
                     }
                 }
@@ -242,6 +583,45 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "http.AddFavoriteRequest": {
             "type": "object",
             "required": [
@@ -257,16 +637,130 @@ const docTemplate = `{
                 }
             }
         },
-        "http.CreateRestaurantRequest": {
-            "type": "object"
-        },
-        "http.ErrorResponse": {
+        "http.AdvanceSearchRequest": {
             "type": "object",
+            "required": [
+                "language_code",
+                "location_bias",
+                "max_result_count",
+                "rank_preference",
+                "text_query"
+            ],
             "properties": {
-                "error": {
+                "api_mask": {
                     "type": "string"
                 },
-                "message": {
+                "language_code": {
+                    "type": "string",
+                    "enum": [
+                        "en",
+                        "ja",
+                        "zh-TW"
+                    ]
+                },
+                "location_bias": {
+                    "$ref": "#/definitions/http.LocationBias"
+                },
+                "max_result_count": {
+                    "type": "integer",
+                    "maximum": 20,
+                    "minimum": 1
+                },
+                "min_rating": {
+                    "type": "number",
+                    "maximum": 5,
+                    "minimum": 0
+                },
+                "open_now": {
+                    "type": "boolean"
+                },
+                "rank_preference": {
+                    "type": "string",
+                    "enum": [
+                        "DISTANCE",
+                        "RELEVANCE"
+                    ]
+                },
+                "text_query": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.AdvanceSearchResponse": {
+            "type": "object",
+            "properties": {
+                "places": {
+                    "type": "array",
+                    "items": {}
+                },
+                "search_metadata": {
+                    "$ref": "#/definitions/http.SearchMetadata"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "http.Coordinates": {
+            "type": "object",
+            "required": [
+                "latitude",
+                "longitude"
+            ],
+            "properties": {
+                "latitude": {
+                    "type": "number",
+                    "maximum": 90,
+                    "minimum": -90
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 180,
+                    "minimum": -180
+                }
+            }
+        },
+        "http.CreateRestaurantRequest": {
+            "type": "object",
+            "required": [
+                "external_id",
+                "latitude",
+                "longitude",
+                "name",
+                "source"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "cuisine_type": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "price_range": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "source": {
+                    "$ref": "#/definitions/model.RestaurantSource"
+                },
+                "website": {
                     "type": "string"
                 }
             }
@@ -322,6 +816,167 @@ const docTemplate = `{
             "properties": {
                 "favorite": {
                     "$ref": "#/definitions/http.FavoriteDTO"
+                }
+            }
+        },
+        "http.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "dependencies": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.LocationBias": {
+            "type": "object",
+            "required": [
+                "rectangle"
+            ],
+            "properties": {
+                "rectangle": {
+                    "$ref": "#/definitions/http.Rectangle"
+                }
+            }
+        },
+        "http.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/http.UserResponse"
+                }
+            }
+        },
+        "http.QuickSearchRequest": {
+            "type": "object",
+            "required": [
+                "language_code",
+                "place_id"
+            ],
+            "properties": {
+                "api_mask": {
+                    "type": "string"
+                },
+                "language_code": {
+                    "type": "string",
+                    "enum": [
+                        "en",
+                        "ja",
+                        "zh-TW"
+                    ]
+                },
+                "place_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.QuickSearchResponse": {
+            "type": "object",
+            "properties": {
+                "cached_at": {
+                    "type": "string"
+                },
+                "result": {},
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.Rectangle": {
+            "type": "object",
+            "required": [
+                "high",
+                "low"
+            ],
+            "properties": {
+                "high": {
+                    "$ref": "#/definitions/http.Coordinates"
+                },
+                "low": {
+                    "$ref": "#/definitions/http.Coordinates"
+                }
+            }
+        },
+        "http.RefreshTokenRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.RefreshTokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 3
+                }
+            }
+        },
+        "http.RegisterResponse": {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "$ref": "#/definitions/http.UserResponse"
                 }
             }
         },
@@ -396,6 +1051,64 @@ const docTemplate = `{
                     "$ref": "#/definitions/http.RestaurantDTO"
                 }
             }
+        },
+        "http.SearchMetadata": {
+            "type": "object",
+            "properties": {
+                "search_time_ms": {
+                    "type": "integer"
+                },
+                "text_query": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.UserResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "email_verified": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.ValidateTokenResponse": {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "$ref": "#/definitions/http.UserResponse"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "model.RestaurantSource": {
+            "type": "string",
+            "enum": [
+                "tabelog",
+                "google",
+                "opentable"
+            ],
+            "x-enum-varnames": [
+                "SourceTabelog",
+                "SourceGoogle",
+                "SourceOpenTable"
+            ]
         }
     },
     "securityDefinitions": {
