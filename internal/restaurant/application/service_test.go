@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	mapv1 "github.com/Leon180/tabelogo-v2/api/gen/map/v1"
 	domainerrors "github.com/Leon180/tabelogo-v2/internal/restaurant/domain/errors"
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/domain/model"
 	"github.com/google/uuid"
@@ -162,6 +163,19 @@ func (m *MockFavoriteRepository) FindByTag(ctx context.Context, userID uuid.UUID
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]*model.Favorite), args.Error(1)
+}
+
+// MockMapServiceClient is a mock implementation of MapServiceClient
+type MockMapServiceClient struct {
+	mock.Mock
+}
+
+func (m *MockMapServiceClient) QuickSearch(ctx context.Context, placeID string) (*mapv1.Place, error) {
+	args := m.Called(ctx, placeID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*mapv1.Place), args.Error(1)
 }
 
 // Test CreateRestaurant

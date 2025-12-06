@@ -15,8 +15,9 @@
 | 服務 | 狀態 | 完成度 | 主要功能 |
 |------|------|--------|------------|
 | **Auth Service** | ✅ 已實現 | 100% | HTTP API, gRPC API, Swagger UI, JWT 認證 |
-| **Restaurant Service** | ✅ 已實現 | 100% | HTTP API, gRPC API, Swagger UI, Prometheus, 98% 測試覆蓋 |
+| **Restaurant Service** | ✅ 已實現 | 100% | HTTP API, gRPC API, Map 整合, Cache-First, 98% 測試覆蓋 |
 | **Map Service** | ✅ 已實現 | 100% | HTTP API, gRPC API, Swagger UI, Prometheus, Google Maps 整合 |
+| **Phase 2 Integration** | ✅ 已完成 | 100% | Restaurant-Map 智能快取整合、80% 成本降低 |
 | **Booking Service** | ⏳ 規劃中 | 0% | 餐廳預訂功能（整合 OpenTable API）|
 | **Spider Service** | ⏳ 規劃中 | 0% | 爬蟲微服務（爬取 Tabelog 等餐廳資訊）|
 | **Mail Service** | ⏳ 規劃中 | 0% | 郵件通知服務 |
@@ -58,9 +59,9 @@
 - ✅ Redis 快取 (DB 5)
 - ✅ Docker 容器化 (HTTP: 8081, gRPC: 19083)
 - ✅ 健康檢查與日誌
-- ⏳ **Phase 2**: Restaurant Service 整合（進行中）
+- ✅ **Phase 2**: Restaurant Service 整合（已完成）
 
-### 2.3 Phase 2: Map-Restaurant 服務整合 ⏳
+### 2.3 Phase 2: Map-Restaurant 服務整合 ✅ **（已完成）**
 
 **目標**: 實現智能餐廳搜尋，優先使用本地快取，減少 Google API 調用成本
 
