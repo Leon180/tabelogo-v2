@@ -3,15 +3,36 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/Leon180/tabelogo-v2/internal/restaurant/application"
+	"github.com/Leon180/tabelogo-v2/internal/restaurant/infrastructure/grpc"
 	restaurantpostgres "github.com/Leon180/tabelogo-v2/internal/restaurant/infrastructure/postgres"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
 	redisclient "github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	grpclib "google.golang.org/grpc"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+// NewMapServiceConnection creates a gRPC connection to Map Service
+func NewMapServiceConnection(cfg *config.Config, logger *zap.Logger) (*grpclib.ClientConn, error) {
+	grpcConfig := &grpc.ConnectionConfig{
+		Address:          cfg.MapService.GRPCAddr,
+		Timeout:          cfg.MapService.Timeout,
+		MaxRetries:       3,
+		KeepAliveTime:    30 * time.Second,
+		KeepAliveTimeout: 10 * time.Second,
+	}
+	return grpc.NewMapServiceConnection(grpcConfig, logger)
+}
+
+// NewMapServiceClient creates a Map Service gRPC client
+func NewMapServiceClient(conn *grpclib.ClientConn, cfg *config.Config, logger *zap.Logger) application.MapServiceClient {
+	return grpc.NewMapServiceClient(conn, logger, cfg.MapService.Timeout)
+}
 
 // Module provides infrastructure dependencies
 var Module = fx.Module("restaurant.infrastructure",
@@ -20,6 +41,9 @@ var Module = fx.Module("restaurant.infrastructure",
 		NewRedis,
 		restaurantpostgres.NewRestaurantRepository,
 		restaurantpostgres.NewFavoriteRepository,
+		// Map Service integration
+		NewMapServiceConnection,
+		NewMapServiceClient,
 	),
 )
 
