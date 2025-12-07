@@ -58,8 +58,8 @@ func (c *GooglePlacesClient) GetPlaceDetails(
 	if fieldMask != "" {
 		req.Header.Set("X-Goog-FieldMask", fieldMask)
 	} else {
-		// Default field mask
-		req.Header.Set("X-Goog-FieldMask", "id,displayName,formattedAddress,location,rating,priceLevel,photos,currentOpeningHours")
+		// Default field mask - includes addressComponents for area extraction
+		req.Header.Set("X-Goog-FieldMask", "id,displayName,formattedAddress,location,rating,priceLevel,photos,currentOpeningHours,addressComponents")
 	}
 
 	c.logger.Info("Calling Google Places API",
@@ -146,8 +146,8 @@ func (c *GooglePlacesClient) TextSearch(
 	if fieldMask != "" {
 		req.Header.Set("X-Goog-FieldMask", fieldMask)
 	} else {
-		// Default field mask for text search
-		req.Header.Set("X-Goog-FieldMask", "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.priceLevel,places.currentOpeningHours")
+		// Default field mask - includes addressComponents for area extraction
+		req.Header.Set("X-Goog-FieldMask", "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.priceLevel,places.currentOpeningHours,places.addressComponents")
 	}
 
 	c.logger.Info("Calling Google Text Search API",
