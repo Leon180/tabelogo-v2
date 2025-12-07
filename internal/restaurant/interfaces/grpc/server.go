@@ -114,20 +114,16 @@ func (s *RestaurantServer) GetRestaurantByExternalID(
 func (s *RestaurantServer) UpdateRestaurant(
 	ctx context.Context,
 	req *restaurantv1.UpdateRestaurantRequest,
-) (*restaurantv1.UpdateRestaurantResponse, error) {
+) (*restaurantv1.RestaurantResponse, error) {
 	id, err := uuid.Parse(req.Id)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid restaurant ID")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid restaurant ID: %v", err)
 	}
 
+	// Currently only supports updating Japanese name
+	// Future: Add more fields as needed
 	appReq := application.UpdateRestaurantRequest{
-		Name:        req.Name,
-		Address:     req.Address,
-		Rating:      req.Rating,
-		PriceRange:  req.PriceRange,
-		CuisineType: req.CuisineType,
-		Phone:       req.Phone,
-		Website:     req.Website,
+		NameJa: req.NameJa,
 	}
 
 	restaurant, err := s.service.UpdateRestaurant(ctx, id, appReq)
@@ -136,10 +132,10 @@ func (s *RestaurantServer) UpdateRestaurant(
 			return nil, status.Error(codes.NotFound, "restaurant not found")
 		}
 		s.logger.Error("Failed to update restaurant", zap.Error(err))
-		return nil, status.Error(codes.Internal, "failed to update restaurant")
+		return nil, status.Errorf(codes.Internal, "failed to update restaurant: %v", err)
 	}
 
-	return &restaurantv1.UpdateRestaurantResponse{
+	return &restaurantv1.RestaurantResponse{
 		Restaurant: toProtoRestaurant(restaurant),
 	}, nil
 }
