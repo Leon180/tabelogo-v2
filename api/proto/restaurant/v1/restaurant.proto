@@ -96,13 +96,7 @@ message GetRestaurantByExternalIDRequest {
 // UpdateRestaurantRequest
 message UpdateRestaurantRequest {
   string id = 1;
-  string name = 2;
-  string address = 3;
-  double rating = 4;
-  string price_range = 5;
-  string cuisine_type = 6;
-  string phone = 7;
-  string website = 8;
+  string name_ja = 2;  // Japanese name
 }
 
 message UpdateRestaurantResponse {

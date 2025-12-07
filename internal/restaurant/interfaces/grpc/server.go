@@ -114,7 +114,7 @@ func (s *RestaurantServer) GetRestaurantByExternalID(
 func (s *RestaurantServer) UpdateRestaurant(
 	ctx context.Context,
 	req *restaurantv1.UpdateRestaurantRequest,
-) (*restaurantv1.RestaurantResponse, error) {
+) (*restaurantv1.UpdateRestaurantResponse, error) {
 	id, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid restaurant ID: %v", err)
@@ -135,7 +135,7 @@ func (s *RestaurantServer) UpdateRestaurant(
 		return nil, status.Errorf(codes.Internal, "failed to update restaurant: %v", err)
 	}
 
-	return &restaurantv1.RestaurantResponse{
+	return &restaurantv1.UpdateRestaurantResponse{
 		Restaurant: toProtoRestaurant(restaurant),
 	}, nil
 }
