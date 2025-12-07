@@ -135,25 +135,45 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
 
   // Extract locality from place's addressComponents (preferred method)
   function extractLocalityFromPlace(place: any): string {
+    console.log('🔍 Extracting locality from place:', {
+      hasAddressComponents: !!place?.addressComponents,
+      addressComponentsLength: place?.addressComponents?.length,
+      formattedAddress: place?.formattedAddress
+    });
+
     if (!place?.addressComponents) {
-      return extractArea(place?.formattedAddress || '');
+      const fallback = extractArea(place?.formattedAddress || '');
+      console.log('⚠️ No addressComponents, using fallback:', fallback);
+      return fallback;
     }
 
     // Find locality or sublocality from addressComponents
     for (const component of place.addressComponents) {
       const types = component.types || [];
 
+      console.log('📍 Checking component:', {
+        types,
+        longText: component.longText,
+        shortText: component.shortText
+      });
+
       // Priority order: locality (city/ward) > sublocality_level_1 > administrative_area_level_1
       if (types.includes('locality')) {
-        return component.longText || component.shortText || '';
+        const result = component.longText || component.shortText || '';
+        console.log('✅ Found locality:', result);
+        return result;
       }
       if (types.includes('sublocality_level_1')) {
-        return component.longText || component.shortText || '';
+        const result = component.longText || component.shortText || '';
+        console.log('✅ Found sublocality_level_1:', result);
+        return result;
       }
     }
 
     // Fallback to formatted address
-    return extractArea(place?.formattedAddress || '');
+    const fallback = extractArea(place?.formattedAddress || '');
+    console.log('⚠️ No locality found, using fallback:', fallback);
+    return fallback;
   }
 
   return (
