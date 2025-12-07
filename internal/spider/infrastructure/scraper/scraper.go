@@ -15,17 +15,15 @@ import (
 
 // Scraper handles web scraping operations
 type Scraper struct {
-	config     *models.ScraperConfig
-	logger     *zap.Logger
-	areaMapper *AreaMapper
+	config *models.ScraperConfig
+	logger *zap.Logger
 }
 
 // NewScraper creates a new scraper
 func NewScraper(config *models.ScraperConfig, logger *zap.Logger) *Scraper {
 	return &Scraper{
-		config:     config,
-		logger:     logger.With(zap.String("component", "scraper")),
-		areaMapper: NewAreaMapper(),
+		config: config,
+		logger: logger.With(zap.String("component", "scraper")),
 	}
 }
 
@@ -234,16 +232,16 @@ func (s *Scraper) newCollector() *colly.Collector {
 }
 
 // buildSearchURL builds the Tabelog search URL
+// Following v1: area is administrative_area_level_1 (e.g., "Tokyo") converted to lowercase
 func (s *Scraper) buildSearchURL(area, placeName string) string {
 	s.logger.Info("🔧 Building Tabelog search URL",
 		zap.String("input_area", area),
 		zap.String("input_place_name", placeName),
 	)
 
-	// Map Google Maps address to Tabelog area code
-	// Example: "Meguro, Tokyo" -> "tokyo/A1316"
-	// Example: "4-chōme-6-8 Komaba" -> "tokyo" (default if no match)
-	tabelogArea := s.areaMapper.MapToTabelogArea(area)
+	// V1 approach: just lowercase the area
+	// Example: "Tokyo" -> "tokyo"
+	tabelogArea := strings.ToLower(strings.TrimSpace(area))
 
 	baseURL := fmt.Sprintf("https://tabelog.com/%s/rstLst/", tabelogArea)
 	params := url.Values{}
@@ -254,7 +252,7 @@ func (s *Scraper) buildSearchURL(area, placeName string) string {
 	finalURL := baseURL + "?" + params.Encode()
 
 	s.logger.Info("✅ Tabelog URL constructed",
-		zap.String("tabelog_area_code", tabelogArea),
+		zap.String("tabelog_area", tabelogArea),
 		zap.String("final_url", finalURL),
 	)
 

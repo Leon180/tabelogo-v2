@@ -19,14 +19,22 @@ func NewAreaMapper() *AreaMapper {
 }
 
 // MapToTabelogArea converts a Google Maps address to Tabelog area code
-// Example: "Meguro, Tokyo" -> "tokyo/A1316"
+// Example: "Tokyo" -> "tokyo" (general search)
+// Example: "Meguro City" -> "tokyo/A1316"
 func (m *AreaMapper) MapToTabelogArea(address string) string {
 	originalAddress := address
 
 	// Normalize address
 	address = strings.ToLower(strings.TrimSpace(address))
 
-	// Try to find matching area
+	// Special case: if input is just "tokyo" (administrative_area_level_1),
+	// use general Tokyo search
+	if address == "tokyo" || address == "tōkyō" || address == "東京" {
+		fmt.Printf("🗺️  Area Mapper: '%s' -> 'tokyo' (administrative area level 1)\n", originalAddress)
+		return "tokyo"
+	}
+
+	// Try to find matching area (ward/city level)
 	for areaName, areaCode := range m.areaCodeMap {
 		if strings.Contains(address, areaName) {
 			// Log successful mapping

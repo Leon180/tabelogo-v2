@@ -160,6 +160,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   }
 
   // Extract locality from place's addressComponents (preferred method)
+  // Following v1 approach: extract administrative_area_level_1 (e.g., "Tokyo")
   function extractLocalityFromPlace(place: any): string {
     console.log('🔍 Extracting locality from place:', {
       hasAddressComponents: !!place?.addressComponents,
@@ -173,7 +174,8 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       return fallback;
     }
 
-    // Find locality or sublocality from addressComponents
+    // Find administrative_area_level_1 (prefecture/state level - e.g., "Tokyo")
+    // This matches v1 behavior
     for (const component of place.addressComponents) {
       const types = component.types || [];
 
@@ -183,22 +185,28 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
         shortText: component.shortText
       });
 
-      // Priority order: locality (city/ward) > sublocality_level_1 > administrative_area_level_1
-      if (types.includes('locality')) {
+      // Priority: administrative_area_level_1 (Tokyo, Osaka, etc.)
+      if (types.includes('administrative_area_level_1')) {
         const result = component.longText || component.shortText || '';
-        console.log('✅ Found locality:', result);
-        return result;
-      }
-      if (types.includes('sublocality_level_1')) {
-        const result = component.longText || component.shortText || '';
-        console.log('✅ Found sublocality_level_1:', result);
+        console.log('✅ Found administrative_area_level_1:', result);
         return result;
       }
     }
 
-    // Fallback to formatted address
+    // Fallback to locality if administrative_area_level_1 not found
+    for (const component of place.addressComponents) {
+      const types = component.types || [];
+
+      if (types.includes('locality')) {
+        const result = component.longText || component.shortText || '';
+        console.log('✅ Found locality (fallback):', result);
+        return result;
+      }
+    }
+
+    // Final fallback to formatted address
     const fallback = extractArea(place?.formattedAddress || '');
-    console.log('⚠️ No locality found, using fallback:', fallback);
+    console.log('⚠️ No area component found, using fallback:', fallback);
     return fallback;
   }
 
