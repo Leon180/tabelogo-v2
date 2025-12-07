@@ -32,13 +32,10 @@ func NewHTTPServer(cfg *config.Config) *gin.Engine {
 
 	router := gin.New()
 
-	// Add recovery middleware
+	// Configure middleware
 	router.Use(gin.Recovery())
-
-	// Add logger middleware
 	router.Use(gin.Logger())
-
-	// Add metrics middleware
+	router.Use(CORSMiddleware()) // Enable CORS for frontend
 	router.Use(MetricsMiddleware())
 
 	return router

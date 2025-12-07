@@ -265,7 +265,21 @@ func convertToProtoPlace(data map[string]interface{}) *mapv1.Place {
 	}
 
 	// Extract opening hours
-	if hours, ok := data["regularOpeningHours"].(map[string]interface{}); ok {
+	// Try currentOpeningHours first (for places that are currently open/closed)
+	if hours, ok := data["currentOpeningHours"].(map[string]interface{}); ok {
+		place.OpeningHours = &mapv1.OpeningHours{}
+		if openNow, ok := hours["openNow"].(bool); ok {
+			place.OpeningHours.OpenNow = openNow
+		}
+		if weekdayText, ok := hours["weekdayDescriptions"].([]interface{}); ok {
+			for _, day := range weekdayText {
+				if dayStr, ok := day.(string); ok {
+					place.OpeningHours.WeekdayText = append(place.OpeningHours.WeekdayText, dayStr)
+				}
+			}
+		}
+	} else if hours, ok := data["regularOpeningHours"].(map[string]interface{}); ok {
+		// Fallback to regularOpeningHours if currentOpeningHours is not available
 		place.OpeningHours = &mapv1.OpeningHours{}
 		if openNow, ok := hours["openNow"].(bool); ok {
 			place.OpeningHours.OpenNow = openNow

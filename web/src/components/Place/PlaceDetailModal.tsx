@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { X, MapPin, Star, DollarSign, Clock, Phone, Globe, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
+import { useRestaurantQuickSearch } from '@/hooks/useRestaurantSearch';
 import { useQuickSearch } from '@/hooks/useMapSearch';
 import { getPlacePhotoUrl, getPlaceholderImageUrl } from '@/lib/utils/getPlacePhotoUrl';
 import type { Place } from '@/types/search';
@@ -14,9 +15,20 @@ interface PlaceDetailModalProps {
 }
 
 export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalProps) {
-  const { data, isLoading, error } = useQuickSearch(
-    isOpen ? { place_id: placeId, language_code: 'en' } : null
+  // NEW: Use Restaurant Service (cache-first)
+  const { data: restaurantData, isLoading: isRestaurantLoading, error: restaurantError } = useRestaurantQuickSearch(
+    isOpen ? placeId : null
   );
+
+  // FALLBACK: Use Map Service if Restaurant Service fails
+  const { data: mapData, isLoading: isMapLoading, error: mapError } = useQuickSearch(
+    isOpen && restaurantError ? { place_id: placeId, language_code: 'en' } : null
+  );
+
+  // Use Restaurant Service data if available, otherwise fall back to Map Service
+  const data = restaurantData || mapData;
+  const isLoading = isRestaurantLoading || isMapLoading;
+  const error = restaurantError && mapError ? mapError : null;
 
   // Close modal on ESC key
   useEffect(() => {
@@ -35,7 +47,27 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
 
   if (!isOpen) return null;
 
-  const place = data?.result;
+  // Extract place data - Restaurant Service returns different format
+  const place = restaurantData ? convertRestaurantToPlace(restaurantData.restaurant) : mapData?.result;
+
+  // Helper function to convert Restaurant Service format to Place format
+  function convertRestaurantToPlace(restaurant: any): Place {
+    return {
+      id: restaurant.external_id,
+      displayName: { text: restaurant.name },
+      formattedAddress: restaurant.address,
+      location: {
+        latitude: restaurant.latitude,
+        longitude: restaurant.longitude,
+      },
+      rating: restaurant.rating,
+      priceLevel: restaurant.price_range ? `PRICE_LEVEL_${restaurant.price_range}` : undefined,
+      nationalPhoneNumber: restaurant.phone,
+      websiteUri: restaurant.website,
+      // Note: Restaurant Service doesn't include photos, opening hours yet
+      // These will be added in future updates
+    } as Place;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -83,10 +115,16 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                   </div>
                 )}
 
-                {/* Cache Badge */}
-                {data?.source === 'redis' && (
-                  <div className="absolute top-4 left-4 px-3 py-1 bg-green-500/90 text-white text-xs font-medium rounded-full">
-                    ⚡ Cached
+                {/* Cache Badge - Show if using Restaurant Service cache */}
+                {restaurantData && (
+                  <div className="absolute top-4 left-4 px-3 py-1 bg-green-500/90 text-white text-xs font-medium rounded-full flex items-center gap-1">
+                    ⚡ Restaurant Service (Cached)
+                  </div>
+                )}
+                {/* Fallback Badge - Show if using Map Service */}
+                {!restaurantData && mapData?.source === 'redis' && (
+                  <div className="absolute top-4 left-4 px-3 py-1 bg-blue-500/90 text-white text-xs font-medium rounded-full">
+                    Map Service (Cached)
                   </div>
                 )}
               </div>
