@@ -33,7 +33,7 @@ func NewHTTPServer(cfg *config.Config) *gin.Engine {
 	router.Use(gin.Recovery())
 	router.Use(gin.Logger())
 
-	// CORS middleware
+	// CORS middleware - must be before routes
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -41,7 +41,7 @@ func NewHTTPServer(cfg *config.Config) *gin.Engine {
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
 
 		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 
