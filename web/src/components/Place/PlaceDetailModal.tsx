@@ -317,10 +317,10 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                           ✗ {updateError}
                         </p>
                       </div>
-                    ))}
+                    )}
 
                     {/* Tabelog Results */}
-                    {tabelogResults && tabelogResults.length > 0 && (
+                    {tabelogResults.length > 0 && (
                       <div className="mt-4">
                         <h3 className="text-lg font-semibold text-white mb-3">
                           🍜 Tabelog Results ({tabelogResults.length})
