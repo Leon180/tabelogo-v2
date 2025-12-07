@@ -2,7 +2,7 @@
 
 # Variables
 DOCKER_COMPOSE = docker-compose -f deployments/docker-compose/docker-compose.yml
-SERVICES = auth-service restaurant-service map-service
+SERVICES = auth-service restaurant-service map-service spider-service
 
 ## help: Show this help message
 help:

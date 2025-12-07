@@ -253,6 +253,7 @@ services:
       GRPC_PORT: 19084
       ENVIRONMENT: development
       LOG_LEVEL: info
+      DB_NAME: spider_db_placeholder
     ports:
       - "18084:18084" # HTTP
       - "19084:19084" # gRPC

@@ -168,6 +168,53 @@ func (s *restaurantService) UpdateRestaurant(ctx context.Context, id uuid.UUID, 
 			zap.String("id", id.String()),
 			zap.String("name_ja", req.NameJa))
 	}
+	if req.Address != "" {
+		restaurant.UpdateAddress(req.Address)
+		s.logger.Info("Updating restaurant address",
+			zap.String("id", id.String()),
+			zap.String("address", req.Address))
+	}
+	if req.Rating > 0 {
+		restaurant.UpdateRating(req.Rating)
+		s.logger.Info("Updating restaurant rating",
+			zap.String("id", id.String()),
+			zap.Float64("rating", req.Rating))
+	}
+	if req.PriceRange != "" {
+		restaurant.UpdatePriceRange(req.PriceRange)
+		s.logger.Info("Updating restaurant price range",
+			zap.String("id", id.String()),
+			zap.String("price_range", req.PriceRange))
+	}
+	if req.CuisineType != "" {
+		restaurant.UpdateCuisineType(req.CuisineType)
+		s.logger.Info("Updating restaurant cuisine type",
+			zap.String("id", id.String()),
+			zap.String("cuisine_type", req.CuisineType))
+	}
+	if req.Phone != "" {
+		restaurant.UpdatePhone(req.Phone)
+		s.logger.Info("Updating restaurant phone",
+			zap.String("id", id.String()),
+			zap.String("phone", req.Phone))
+	}
+	if req.Website != "" {
+		restaurant.UpdateWebsite(req.Website)
+		s.logger.Info("Updating restaurant website",
+			zap.String("id", id.String()),
+			zap.String("website", req.Website))
+	}
+	if req.Latitude != 0 && req.Longitude != 0 {
+		location, err := model.NewLocation(req.Latitude, req.Longitude)
+		if err != nil {
+			return nil, err
+		}
+		restaurant.UpdateLocation(location)
+		s.logger.Info("Updating restaurant location",
+			zap.String("id", id.String()),
+			zap.Float64("latitude", req.Latitude),
+			zap.Float64("longitude", req.Longitude))
+	}
 
 	// Save updated restaurant
 	if err := s.restaurantRepo.Update(ctx, restaurant); err != nil {

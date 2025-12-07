@@ -20,5 +20,14 @@ type CreateRestaurantRequest struct {
 
 // UpdateRestaurantRequest represents a request to update a restaurant
 type UpdateRestaurantRequest struct {
-	NameJa string `json:"name_ja"`
+	Name        string  `json:"name"`
+	NameJa      string  `json:"name_ja"`
+	Address     string  `json:"address"`
+	Rating      float64 `json:"rating"`
+	PriceRange  string  `json:"price_range"`
+	CuisineType string  `json:"cuisine_type"`
+	Phone       string  `json:"phone"`
+	Website     string  `json:"website"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
 }

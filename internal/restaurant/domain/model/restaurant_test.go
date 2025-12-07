@@ -210,6 +210,7 @@ func TestReconstructRestaurant(t *testing.T) {
 	restaurant := ReconstructRestaurant(
 		id,
 		"Test Restaurant",
+		"Test Restaurant",
 		SourceTabelog,
 		"external123",
 		"Test Address",

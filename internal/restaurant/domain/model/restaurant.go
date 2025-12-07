@@ -181,6 +181,18 @@ func (r *Restaurant) DeletedAt() *time.Time            { return r.deletedAt }
 
 // Domain Methods
 
+// UpdateName updates the restaurant's name
+func (r *Restaurant) UpdateName(name string) {
+	r.name = name
+	r.updatedAt = time.Now()
+}
+
+// UpdateAddress updates the restaurant's address
+func (r *Restaurant) UpdateAddress(address string) {
+	r.address = address
+	r.updatedAt = time.Now()
+}
+
 // UpdateRating updates the restaurant's rating
 func (r *Restaurant) UpdateRating(rating float64) {
 	if rating < 0.0 {
