@@ -15,15 +15,17 @@ import (
 
 // Scraper handles web scraping operations
 type Scraper struct {
-	config *models.ScraperConfig
-	logger *zap.Logger
+	config     *models.ScraperConfig
+	logger     *zap.Logger
+	areaMapper *AreaMapper
 }
 
 // NewScraper creates a new scraper
 func NewScraper(config *models.ScraperConfig, logger *zap.Logger) *Scraper {
 	return &Scraper{
-		config: config,
-		logger: logger.With(zap.String("component", "scraper")),
+		config:     config,
+		logger:     logger.With(zap.String("component", "scraper")),
+		areaMapper: NewAreaMapper(),
 	}
 }
 
@@ -228,25 +230,22 @@ func (s *Scraper) newCollector() *colly.Collector {
 		RandomDelay: 200 * time.Millisecond,
 	})
 
+```
 	return c
 }
 
 // buildSearchURL builds the Tabelog search URL
 func (s *Scraper) buildSearchURL(area, placeName string) string {
-	// Use Tokyo general search as the area parameter is an address, not a Tabelog area code
-	// Tabelog will search across all of Tokyo based on the search keywords
-	baseURL := "https://tabelog.com/tokyo/rstLst/"
+	// Map Google Maps address to Tabelog area code
+	// Example: "Meguro, Tokyo" -> "tokyo/A1316"
+	// Example: "4-chōme-6-8 Komaba" -> "tokyo" (default if no match)
+	tabelogArea := s.areaMapper.MapToTabelogArea(area)
+	
+	baseURL := fmt.Sprintf("https://tabelog.com/%s/rstLst/", tabelogArea)
 	params := url.Values{}
 	params.Add("vs", "1")
-
-	// Combine place name and area for better search results
-	searchQuery := placeName
-	if area != "" {
-		searchQuery = placeName + " " + area
-	}
-
-	params.Add("sk", searchQuery)
-	params.Add("sw", searchQuery)
+	params.Add("sk", placeName)
+	params.Add("sw", placeName)
 
 	return baseURL + "?" + params.Encode()
 }
