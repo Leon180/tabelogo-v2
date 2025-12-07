@@ -317,23 +317,21 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                           ✗ {updateError}
                         </p>
                       </div>
-                    )}
+                    ))}
 
                     {/* Tabelog Results */}
-                    {tabelogRestaurants && tabelogRestaurants.length > 0 && (
-                      <div className="mt-6 border-t pt-6">
-                        <h3 className="text-lg font-semibold mb-4">🍜 Tabelog Results</h3>
-                        <div className="space-y-3">
-                          {tabelogRestaurants.map((restaurant, index) => (
-                            <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
-                              <a
-                                href={restaurant.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline font-medium"
-                              >
-                                {restaurant.name}
-                              </a>      rel="noopener noreferrer"
+                    {tabelogResults && tabelogResults.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-lg font-semibold text-white mb-3">
+                          🍜 Tabelog Results ({tabelogResults.length})
+                        </h3>
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {tabelogResults.map((restaurant, index) => (
+                            <a
+                              key={index}
+                              href={restaurant.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="block p-3 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors border border-zinc-700/50 hover:border-orange-600/50"
                             >
                               <div className="flex items-start justify-between gap-3">
