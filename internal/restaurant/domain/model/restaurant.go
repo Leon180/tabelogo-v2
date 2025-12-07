@@ -19,6 +19,7 @@ const (
 type Restaurant struct {
 	id           uuid.UUID
 	name         string
+	nameJa       string // Japanese name for better Tabelog search
 	source       RestaurantSource
 	externalID   string
 	address      string
@@ -48,6 +49,7 @@ func NewRestaurant(
 	return &Restaurant{
 		id:           uuid.New(),
 		name:         name,
+		nameJa:       "", // Will be set later via frontend or update API
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -94,6 +96,7 @@ func NewRestaurantWithDetails(
 	return &Restaurant{
 		id:           uuid.New(),
 		name:         name,
+		nameJa:       "", // Will be set later
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -117,6 +120,7 @@ func NewRestaurantWithDetails(
 func ReconstructRestaurant(
 	id uuid.UUID,
 	name string,
+	nameJa string,
 	source RestaurantSource,
 	externalID string,
 	address string,
@@ -136,6 +140,7 @@ func ReconstructRestaurant(
 	return &Restaurant{
 		id:           id,
 		name:         name,
+		nameJa:       nameJa,
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -157,6 +162,7 @@ func ReconstructRestaurant(
 // Getters
 func (r *Restaurant) ID() uuid.UUID                    { return r.id }
 func (r *Restaurant) Name() string                     { return r.name }
+func (r *Restaurant) NameJa() string                   { return r.nameJa }
 func (r *Restaurant) Source() RestaurantSource         { return r.source }
 func (r *Restaurant) ExternalID() string               { return r.externalID }
 func (r *Restaurant) Address() string                  { return r.address }

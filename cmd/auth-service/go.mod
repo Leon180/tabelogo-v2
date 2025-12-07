@@ -11,7 +11,6 @@ replace (
 
 require (
 	github.com/Leon180/tabelogo-v2 v0.0.0-00010101000000-000000000000
-	github.com/swaggo/swag v1.16.6
 	go.uber.org/fx v1.24.0
 )
 
@@ -60,8 +59,7 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.57.0 // indirect
 	github.com/redis/go-redis/v9 v9.17.0 // indirect
-	github.com/swaggo/files v1.0.1 // indirect
-	github.com/swaggo/gin-swagger v1.6.1 // indirect
+	github.com/swaggo/swag v1.16.6 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.uber.org/dig v1.19.0 // indirect

@@ -15,24 +15,25 @@ import (
 
 // RestaurantORM is the database model for Restaurant
 type RestaurantORM struct {
-	ID            uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Name          string         `gorm:"type:varchar(255);not null"`
-	Source        string         `gorm:"type:varchar(50);not null"`
-	ExternalID    string         `gorm:"type:varchar(255);not null"`
-	Address       string         `gorm:"type:text"`
-	Latitude      float64        `gorm:"type:decimal(10,8)"`
-	Longitude     float64        `gorm:"type:decimal(11,8)"`
-	Rating        float64        `gorm:"type:decimal(3,2)"`
-	PriceRange    string         `gorm:"type:varchar(10)"`
-	CuisineType   string         `gorm:"type:varchar(50)"`
-	Phone         string         `gorm:"type:varchar(20)"`
-	Website       string         `gorm:"type:varchar(500)"`
-	OpeningHours  string         `gorm:"type:jsonb"` // JSON string
-	Metadata      string         `gorm:"type:jsonb"` // JSON string
-	ViewCount     int64          `gorm:"type:bigint;default:0"`
-	CreatedAt     time.Time      `gorm:"not null"`
-	UpdatedAt     time.Time      `gorm:"not null"`
-	DeletedAt     gorm.DeletedAt `gorm:"index"`
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Name         string         `gorm:"type:varchar(255);not null"`
+	NameJa       string         `gorm:"type:varchar(255)"`
+	Source       string         `gorm:"type:varchar(50);not null"`
+	ExternalID   string         `gorm:"type:varchar(255);not null"`
+	Address      string         `gorm:"type:text"`
+	Latitude     float64        `gorm:"type:decimal(10,8)"`
+	Longitude    float64        `gorm:"type:decimal(11,8)"`
+	Rating       float64        `gorm:"type:decimal(3,2)"`
+	PriceRange   string         `gorm:"type:varchar(10)"`
+	CuisineType  string         `gorm:"type:varchar(50)"`
+	Phone        string         `gorm:"type:varchar(20)"`
+	Website      string         `gorm:"type:varchar(500)"`
+	OpeningHours string         `gorm:"type:jsonb"` // JSON string
+	Metadata     string         `gorm:"type:jsonb"` // JSON string
+	ViewCount    int64          `gorm:"type:bigint;default:0"`
+	CreatedAt    time.Time      `gorm:"not null"`
+	UpdatedAt    time.Time      `gorm:"not null"`
+	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }
 
 // TableName overrides the table name
@@ -77,6 +78,7 @@ func (r *RestaurantORM) ToDomain() (*model.Restaurant, error) {
 	return model.ReconstructRestaurant(
 		r.ID,
 		r.Name,
+		r.NameJa,
 		model.RestaurantSource(r.Source),
 		r.ExternalID,
 		r.Address,
@@ -118,6 +120,7 @@ func FromDomain(r *model.Restaurant) (*RestaurantORM, error) {
 	orm := &RestaurantORM{
 		ID:           r.ID(),
 		Name:         r.Name(),
+		NameJa:       r.NameJa(),
 		Source:       string(r.Source()),
 		ExternalID:   r.ExternalID(),
 		Address:      r.Address(),
