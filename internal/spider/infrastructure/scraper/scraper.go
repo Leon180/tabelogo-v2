@@ -230,7 +230,6 @@ func (s *Scraper) newCollector() *colly.Collector {
 		RandomDelay: 200 * time.Millisecond,
 	})
 
-```
 	return c
 }
 
@@ -240,7 +239,7 @@ func (s *Scraper) buildSearchURL(area, placeName string) string {
 	// Example: "Meguro, Tokyo" -> "tokyo/A1316"
 	// Example: "4-chōme-6-8 Komaba" -> "tokyo" (default if no match)
 	tabelogArea := s.areaMapper.MapToTabelogArea(area)
-	
+
 	baseURL := fmt.Sprintf("https://tabelog.com/%s/rstLst/", tabelogArea)
 	params := url.Values{}
 	params.Add("vs", "1")

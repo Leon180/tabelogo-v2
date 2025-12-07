@@ -93,7 +93,6 @@ func buildAreaCodeMap() map[string]string {
 		"shimokitazawa": "tokyo/A1318", // 下北沢 (Setagaya)
 		"kichijoji":     "tokyo/A1331", // 吉祥寺 (Musashino)
 		"koenji":        "tokyo/A1320", // 高円寺 (Suginami)
-		"nakano":        "tokyo/A1319", // 中野 (Nakano)
 		"komaba":        "tokyo/A1316", // 駒場 (Meguro)
 	}
 }

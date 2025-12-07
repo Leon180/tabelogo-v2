@@ -110,7 +110,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
         google_id: placeId,
         place_name: place?.displayName?.text || '',
         place_name_ja: nameJa,
-        area: extractArea(place?.formattedAddress || ''),
+        area: extractLocalityFromPlace(place), // Use addressComponents for better area extraction
         max_results: 10
       });
 
@@ -124,11 +124,36 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
     }
   };
 
-  // Helper function to extract area from address
+  // Helper function to extract area from Google Maps addressComponents
+  // Following v1 approach: extract locality (ward/city) from addressComponents
   function extractArea(address: string): string {
-    // Extract first part of address (e.g., "Sugamo, Tokyo" -> "Sugamo")
+    // This is a fallback - ideally we should use addressComponents from place object
+    // For now, extract first part of address (e.g., "Sugamo, Tokyo" -> "Sugamo")
     const parts = address.split(',');
     return parts[0]?.trim() || '';
+  }
+
+  // Extract locality from place's addressComponents (preferred method)
+  function extractLocalityFromPlace(place: any): string {
+    if (!place?.addressComponents) {
+      return extractArea(place?.formattedAddress || '');
+    }
+
+    // Find locality or sublocality from addressComponents
+    for (const component of place.addressComponents) {
+      const types = component.types || [];
+
+      // Priority order: locality (city/ward) > sublocality_level_1 > administrative_area_level_1
+      if (types.includes('locality')) {
+        return component.longText || component.shortText || '';
+      }
+      if (types.includes('sublocality_level_1')) {
+        return component.longText || component.shortText || '';
+      }
+    }
+
+    // Fallback to formatted address
+    return extractArea(place?.formattedAddress || '');
   }
 
   return (
