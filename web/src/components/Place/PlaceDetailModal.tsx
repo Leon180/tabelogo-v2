@@ -320,7 +320,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                     )}
 
                     {/* Tabelog Results */}
-                    {tabelogResults.length > 0 && (
+                    {tabelogResults && tabelogResults.length > 0 && (
                       <div className="mt-4">
                         <h3 className="text-lg font-semibold text-white mb-3">
                           🍜 Tabelog Results ({tabelogResults.length})
