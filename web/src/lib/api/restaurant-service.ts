@@ -121,19 +121,23 @@ export class NetworkError extends Error {
  * @returns Restaurant details with cache metadata
  */
 export async function quickSearchByPlaceId(placeId: string): Promise<RestaurantResponse> {
-    const response = await restaurantClient.get<RestaurantResponse>(
-        `/api/v1/restaurants/quick-search/${placeId}`
+    const response = await restaurantClient.get<RestaurantResponse>(`/api/v1/restaurants/quick-search/${placeId}`);
+    return response.data;
+}
+
+/**
+ * Update restaurant details
+ * @param id - Restaurant ID
+ * @param data - Update data (currently supports name_ja)
+ */
+export async function updateRestaurant(
+    id: string,
+    data: { name_ja?: string }
+): Promise<RestaurantResponse> {
+    const response = await restaurantClient.patch<RestaurantResponse>(
+        `/api/v1/restaurants/${id}`,
+        data
     );
-
-    // Log cache status for monitoring
-    const cacheStatus = response.headers['x-cache-status'];
-    const dataSource = response.headers['x-data-source'];
-    const dataAge = response.headers['x-data-age'];
-
-    if (process.env.NODE_ENV === 'development') {
-        console.log(`[Restaurant Service] Cache: ${cacheStatus}, Source: ${dataSource}, Age: ${dataAge}`);
-    }
-
     return response.data;
 }
 
@@ -143,6 +147,7 @@ export async function quickSearchByPlaceId(placeId: string): Promise<RestaurantR
 
 export const restaurantService = {
     quickSearchByPlaceId,
+    updateRestaurant,
 };
 
 export default restaurantService;

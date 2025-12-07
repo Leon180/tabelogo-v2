@@ -110,6 +110,26 @@ export async function advanceSearch(params: AdvanceSearchRequest): Promise<Advan
     return response.data;
 }
 
+/**
+ * Get Japanese name for a place
+ * Calls quick_search with language_code=ja to get Japanese place name
+ * 
+ * @param placeId - Google Place ID
+ * @returns Japanese name or null if not available
+ */
+export async function getJapaneseName(placeId: string): Promise<string | null> {
+    try {
+        const response = await quickSearch({
+            place_id: placeId,
+            language_code: 'ja'
+        });
+        return response.result?.displayName?.text || null;
+    } catch (error) {
+        console.error('Failed to get Japanese name:', error);
+        return null;
+    }
+}
+
 // ============================================
 // Exported Service Object
 // ============================================
@@ -117,6 +137,7 @@ export async function advanceSearch(params: AdvanceSearchRequest): Promise<Advan
 export const mapService = {
     quickSearch,
     advanceSearch,
+    getJapaneseName,
 };
 
 export default mapService;
