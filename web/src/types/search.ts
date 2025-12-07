@@ -74,6 +74,12 @@ export interface Place {
     photos?: Photo[];
     reviews?: Review[];
     types?: string[];
+    // Google Maps addressComponents for extracting area information
+    addressComponents?: Array<{
+        longText?: string;
+        shortText?: string;
+        types: string[];
+    }>;
     nationalPhoneNumber?: string;
     internationalPhoneNumber?: string;
     googleMapsUri?: string;
