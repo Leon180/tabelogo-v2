@@ -8,6 +8,7 @@ import { useQuickSearch } from '@/hooks/useMapSearch';
 import { getPlacePhotoUrl, getPlaceholderImageUrl } from '@/lib/utils/getPlacePhotoUrl';
 import { updateRestaurant } from '@/lib/api/restaurant-service';
 import { getJapaneseName } from '@/lib/api/map-service';
+import { searchTabelog, type TabelogRestaurant } from '@/lib/api/spider-service';
 import type { Place } from '@/types/search';
 
 interface PlaceDetailModalProps {
@@ -36,6 +37,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   const [isUpdatingJaName, setIsUpdatingJaName] = useState(false);
   const [japaneseName, setJapaneseName] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [tabelogResults, setTabelogResults] = useState<TabelogRestaurant[]>([]);
 
   // Close modal on ESC key
   useEffect(() => {
@@ -85,6 +87,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
 
     setIsUpdatingJaName(true);
     setUpdateError(null);
+    setTabelogResults([]);
 
     try {
       // 1. Get Japanese name from Google Maps
@@ -102,21 +105,31 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
         name_ja: nameJa
       });
 
-      // 3. TODO: Call Spider Service with name_ja
-      // const tabelogResults = await searchTabelog({
-      //     google_id: placeId,
-      //     name_ja: nameJa,
-      //     area: extractArea(place.formattedAddress)
-      // });
+      // 3. Call Spider Service to search Tabelog
+      const tabelogResponse = await searchTabelog({
+        google_id: placeId,
+        place_name: place.displayName?.text || '',
+        place_name_ja: nameJa,
+        area: extractArea(place.formattedAddress || ''),
+        max_results: 10
+      });
 
-      console.log(`✅ Updated restaurant with Japanese name: ${nameJa}`);
+      setTabelogResults(tabelogResponse.restaurants);
+      console.log(`✅ Found ${tabelogResponse.total_found} Tabelog restaurants`);
     } catch (error) {
-      console.error('Failed to update restaurant:', error);
-      setUpdateError(error instanceof Error ? error.message : 'Failed to update restaurant');
+      console.error('Failed to search Tabelog:', error);
+      setUpdateError(error instanceof Error ? error.message : 'Failed to search Tabelog');
     } finally {
       setIsUpdatingJaName(false);
     }
   };
+
+  // Helper function to extract area from address
+  function extractArea(address: string): string {
+    // Extract first part of address (e.g., "Sugamo, Tokyo" -> "Sugamo")
+    const parts = address.split(',');
+    return parts[0]?.trim() || '';
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -303,6 +316,67 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                         <p className="text-sm text-red-400">
                           ✗ {updateError}
                         </p>
+                      </div>
+                    )}
+
+                    {/* Tabelog Results */}
+                    {tabelogResults.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-lg font-semibold text-white mb-3">
+                          🍜 Tabelog Results ({tabelogResults.length})
+                        </h3>
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {tabelogResults.map((restaurant, index) => (
+                            <a
+                              key={index}
+                              href={restaurant.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block p-3 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors border border-zinc-700/50 hover:border-orange-600/50"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-white truncate">
+                                    {restaurant.name}
+                                  </h4>
+                                  {restaurant.types.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {restaurant.types.slice(0, 3).map((type, i) => (
+                                        <span
+                                          key={i}
+                                          className="text-xs px-2 py-0.5 bg-zinc-700/50 text-zinc-300 rounded"
+                                        >
+                                          {type}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                  <div className="flex items-center gap-1">
+                                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                                    <span className="text-white font-medium">
+                                      {restaurant.rating.toFixed(2)}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs text-zinc-400">
+                                    ({restaurant.rating_count} reviews)
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between mt-2">
+                                <div className="flex items-center gap-2">
+                                  {restaurant.bookmarks > 0 && (
+                                    <span className="text-xs text-zinc-400">
+                                      ⭐ {restaurant.bookmarks} saves
+                                    </span>
+                                  )}
+                                </div>
+                                <ExternalLink className="w-3 h-3 text-zinc-400" />
+                              </div>
+                            </a>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
