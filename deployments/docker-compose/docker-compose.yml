@@ -241,6 +241,31 @@ services:
     restart: unless-stopped
     networks:
       - tabelogo-network
+
+  # Spider Service
+  spider-service:
+    build:
+      context: ../..
+      dockerfile: cmd/spider-service/Dockerfile
+    container_name: tabelogo-spider-service
+    environment:
+      HTTP_PORT: 18084
+      GRPC_PORT: 19084
+      ENVIRONMENT: development
+      LOG_LEVEL: info
+    ports:
+      - "18084:18084" # HTTP
+      - "19084:19084" # gRPC
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:18084/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - tabelogo-network
+
   # Booking Service (Placeholder - to be implemented)
   # booking-service:
   #   build:
