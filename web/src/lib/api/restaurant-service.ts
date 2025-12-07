@@ -7,6 +7,7 @@ import axios, { AxiosError } from 'axios';
 export interface Restaurant {
     id: string;
     name: string;
+    name_ja?: string;
     source: string;
     external_id: string;
     address: string;

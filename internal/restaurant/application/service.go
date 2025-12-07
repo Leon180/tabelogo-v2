@@ -98,15 +98,29 @@ func (s *restaurantService) CreateRestaurant(ctx context.Context, req CreateRest
 		location,
 	)
 
-	// Set optional fields
+	// Set Japanese name if provided
+	if req.NameJa != "" {
+		restaurant.UpdateNameJa(req.NameJa)
+	}
+
+	// Set additional details if provided
 	if req.Rating > 0 {
 		restaurant.UpdateRating(req.Rating)
 	}
-	if req.PriceRange != "" || req.CuisineType != "" || req.Phone != "" || req.Website != "" {
-		restaurant.UpdateDetails("", "", req.PriceRange, req.CuisineType, req.Phone, req.Website)
+	if req.PriceRange != "" {
+		restaurant.UpdatePriceRange(req.PriceRange)
+	}
+	if req.CuisineType != "" {
+		restaurant.UpdateCuisineType(req.CuisineType)
+	}
+	if req.Phone != "" {
+		restaurant.UpdatePhone(req.Phone)
+	}
+	if req.Website != "" {
+		restaurant.UpdateWebsite(req.Website)
 	}
 
-	// Save restaurant
+	// Save to repository
 	if err := s.restaurantRepo.Create(ctx, restaurant); err != nil {
 		s.logger.Error("Failed to create restaurant", zap.Error(err))
 		return nil, err
