@@ -80,6 +80,15 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
 
   // Handle Tabelog button click
   const handleTabelogClick = async () => {
+    console.log('🍜 Tabelog button clicked');
+    console.log('📍 Place object:', {
+      placeId,
+      displayName: place?.displayName?.text,
+      formattedAddress: place?.formattedAddress,
+      hasAddressComponents: !!place?.addressComponents,
+      addressComponents: place?.addressComponents
+    });
+
     if (!restaurantData?.restaurant) {
       setUpdateError('Restaurant data not available');
       return;
@@ -106,12 +115,29 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       });
 
       // 3. Call Spider Service to search Tabelog
+      const extractedArea = extractLocalityFromPlace(place);
+
+      console.log('🚀 Preparing to call Spider Service:', {
+        google_id: placeId,
+        place_name: place?.displayName?.text || '',
+        place_name_ja: nameJa,
+        extracted_area: extractedArea,
+        original_formatted_address: place?.formattedAddress,
+        has_address_components: !!place?.addressComponents,
+        address_components_count: place?.addressComponents?.length || 0
+      });
+
       const tabelogResponse = await searchTabelog({
         google_id: placeId,
         place_name: place?.displayName?.text || '',
         place_name_ja: nameJa,
-        area: extractLocalityFromPlace(place), // Use addressComponents for better area extraction
+        area: extractedArea, // Use addressComponents for better area extraction
         max_results: 10
+      });
+
+      console.log('✅ Spider Service response:', {
+        total_found: tabelogResponse.total_found,
+        restaurants_count: tabelogResponse.restaurants?.length || 0
       });
 
       setTabelogResults(tabelogResponse.restaurants);
