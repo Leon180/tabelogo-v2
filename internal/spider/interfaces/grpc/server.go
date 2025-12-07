@@ -60,19 +60,28 @@ func (s *SpiderServer) SearchSimilarRestaurants(
 	}
 
 	// Convert to proto
-		protoRestaurants[i] = toProtoRestaurant(&r)
+	protoRestaurants := make([]*spiderv1.TabelogRestaurant, 0, len(results))
+	for _, r := range results {
+		protoRestaurants = append(protoRestaurants, &spiderv1.TabelogRestaurant{
+			Link:        r.Link,
+			Name:        r.Name,
+			Rating:      r.Rating,
+			RatingCount: int32(r.RatingCount),
+			Bookmarks:   int32(r.Bookmarks),
+			Phone:       r.Phone,
+			Types:       r.Types,
+		})
 	}
 
-	s.logger.Info("SearchSimilarRestaurants succeeded",
+	s.logger.Info("Tabelog search completed",
 		zap.String("google_id", req.GoogleId),
-		zap.Int("total_found", totalFound),
-		zap.Int("returned", len(protoRestaurants)),
+		zap.Int("results_count", len(protoRestaurants)),
 	)
 
 	return &spiderv1.SearchSimilarRestaurantsResponse{
 		GoogleId:    req.GoogleId,
 		Restaurants: protoRestaurants,
-		TotalFound:  int32(totalFound),
+		TotalFound:  int32(len(protoRestaurants)),
 	}, nil
 }
 
