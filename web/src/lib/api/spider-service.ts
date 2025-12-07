@@ -93,7 +93,7 @@ export async function searchTabelog(
     params: SearchTabelogRequest
 ): Promise<SearchTabelogResponse> {
     const response = await spiderClient.post<SearchTabelogResponse>(
-        '/api/v1/spider/search',
+        '/api/v1/spider/scrape',
         params
     );
     return response.data;
