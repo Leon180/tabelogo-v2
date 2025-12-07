@@ -47,6 +47,7 @@ func (h *RestaurantHandler) CreateRestaurant(c *gin.Context) {
 
 	appReq := application.CreateRestaurantRequest{
 		Name:        req.Name,
+		NameJa:      req.NameJa,
 		Source:      req.Source,
 		ExternalID:  req.ExternalID,
 		Address:     req.Address,
