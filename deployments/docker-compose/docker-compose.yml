@@ -249,7 +249,7 @@ services:
       dockerfile: cmd/spider-service/Dockerfile
     container_name: tabelogo-spider-service
     environment:
-      HTTP_PORT: 18084
+      SERVER_PORT: 18084
       GRPC_PORT: 19084
       ENVIRONMENT: development
       LOG_LEVEL: info
