@@ -10,6 +10,7 @@ import (
 
 type CreateRestaurantRequest struct {
 	Name        string                 `json:"name" binding:"required"`
+	NameJa      string                 `json:"name_ja"`
 	Source      model.RestaurantSource `json:"source" binding:"required"`
 	ExternalID  string                 `json:"external_id" binding:"required"`
 	Address     string                 `json:"address"`
@@ -37,6 +38,7 @@ type ErrorResponse struct {
 type RestaurantDTO struct {
 	ID           string                 `json:"id"`
 	Name         string                 `json:"name"`
+	NameJa       string                 `json:"name_ja,omitempty"`
 	Source       string                 `json:"source"`
 	ExternalID   string                 `json:"external_id"`
 	Address      string                 `json:"address"`
@@ -95,6 +97,7 @@ func toRestaurantDTO(r *model.Restaurant) RestaurantDTO {
 	return RestaurantDTO{
 		ID:           r.ID().String(),
 		Name:         r.Name(),
+		NameJa:       r.NameJa(),
 		Source:       string(r.Source()),
 		ExternalID:   r.ExternalID(),
 		Address:      r.Address(),
