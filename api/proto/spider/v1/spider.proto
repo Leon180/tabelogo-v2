@@ -19,7 +19,8 @@ message SearchSimilarRestaurantsRequest {
   string google_id = 1;   // Google Place ID for tracking/logging
   string area = 2;        // Area to search (e.g., "tokyo", "osaka")
   string place_name = 3;  // Restaurant name to search for
-  int32 max_results = 4;  // Maximum number of results (default: 10, max: 20)
+  string place_name_ja = 4;  // Japanese name for better search accuracy
+  int32 max_results = 5;  // Maximum number of results (default: 10, max: 20)
 }
 
 // SearchSimilarRestaurantsResponse contains search results

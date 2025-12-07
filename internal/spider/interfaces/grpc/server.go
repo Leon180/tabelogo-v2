@@ -34,50 +34,32 @@ func (s *SpiderServer) SearchSimilarRestaurants(
 	ctx context.Context,
 	req *spiderv1.SearchSimilarRestaurantsRequest,
 ) (*spiderv1.SearchSimilarRestaurantsResponse, error) {
-	s.logger.Info("SearchSimilarRestaurants called",
+	// Prioritize Japanese name if available, otherwise use English name
+	searchName := req.PlaceNameJa
+	if searchName == "" {
+		searchName = req.PlaceName
+	}
+
+	s.logger.Info("Searching Tabelog",
 		zap.String("google_id", req.GoogleId),
-		zap.String("area", req.Area),
+		zap.String("search_name", searchName),
+		zap.String("place_name_ja", req.PlaceNameJa),
 		zap.String("place_name", req.PlaceName),
-		zap.Int32("max_results", req.MaxResults),
+		zap.String("area", req.Area),
 	)
 
-	// Validate request
-	if req.Area == "" || req.PlaceName == "" {
-		return nil, status.Error(codes.InvalidArgument, "area and place_name are required")
-	}
-
-	// Set default max results
-	maxResults := req.MaxResults
-	if maxResults == 0 {
-		maxResults = 10
-	} else if maxResults > 20 {
-		maxResults = 20
-	}
-
-	// Scrape restaurants synchronously
-	restaurants, err := s.scraper.ScrapeRestaurants(
-		ctx,
-		req.GoogleId,
-		req.Area,
-		req.PlaceName,
-	)
+	// Scrape Tabelog
+	results, err := s.scraper.ScrapeRestaurants(searchName, req.Area)
 	if err != nil {
-		s.logger.Error("Failed to scrape restaurants",
-			zap.String("google_id", req.GoogleId),
+		s.logger.Error("Failed to scrape Tabelog",
 			zap.Error(err),
+			zap.String("search_name", searchName),
+			zap.String("area", req.Area),
 		)
-		return nil, status.Error(codes.Internal, "failed to scrape restaurants")
-	}
-
-	// Limit results
-	totalFound := len(restaurants)
-	if len(restaurants) > int(maxResults) {
-		restaurants = restaurants[:maxResults]
+		return nil, status.Errorf(codes.Internal, "failed to scrape Tabelog: %v", err)
 	}
 
 	// Convert to proto
-	protoRestaurants := make([]*spiderv1.TabelogRestaurant, len(restaurants))
-	for i, r := range restaurants {
 		protoRestaurants[i] = toProtoRestaurant(&r)
 	}
 
