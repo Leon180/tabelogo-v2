@@ -193,6 +193,36 @@ func (r *Restaurant) UpdateRating(rating float64) {
 	r.updatedAt = time.Now()
 }
 
+// UpdateNameJa updates the Japanese name
+func (r *Restaurant) UpdateNameJa(nameJa string) {
+	r.nameJa = nameJa
+	r.updatedAt = time.Now()
+}
+
+// UpdatePriceRange updates the price range
+func (r *Restaurant) UpdatePriceRange(priceRange string) {
+	r.priceRange = priceRange
+	r.updatedAt = time.Now()
+}
+
+// UpdateCuisineType updates the cuisine type
+func (r *Restaurant) UpdateCuisineType(cuisineType string) {
+	r.cuisineType = cuisineType
+	r.updatedAt = time.Now()
+}
+
+// UpdatePhone updates the phone number
+func (r *Restaurant) UpdatePhone(phone string) {
+	r.phone = phone
+	r.updatedAt = time.Now()
+}
+
+// UpdateWebsite updates the website URL
+func (r *Restaurant) UpdateWebsite(website string) {
+	r.website = website
+	r.updatedAt = time.Now()
+}
+
 // IncrementViewCount increments the view count by 1
 func (r *Restaurant) IncrementViewCount() {
 	r.viewCount++
