@@ -197,7 +197,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:18082/health" ]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:18082/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -258,7 +258,7 @@ services:
       - "18084:18084" # HTTP
       - "19084:19084" # gRPC
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "--method=GET", "http://localhost:18084/health" ]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:18084/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
