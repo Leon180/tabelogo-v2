@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X, MapPin, Star, DollarSign, Clock, Phone, Globe, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import { useRestaurantQuickSearch } from '@/hooks/useRestaurantSearch';
 import { useQuickSearch } from '@/hooks/useMapSearch';
 import { getPlacePhotoUrl, getPlaceholderImageUrl } from '@/lib/utils/getPlacePhotoUrl';
+import { updateRestaurant } from '@/lib/api/restaurant-service';
+import { getJapaneseName } from '@/lib/api/map-service';
 import type { Place } from '@/types/search';
 
 interface PlaceDetailModalProps {
@@ -29,6 +31,11 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   const data = restaurantData || mapData;
   const isLoading = isRestaurantLoading || isMapLoading;
   const error = restaurantError && mapError ? mapError : null;
+
+  // Tabelog integration state
+  const [isUpdatingJaName, setIsUpdatingJaName] = useState(false);
+  const [japaneseName, setJapaneseName] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   // Close modal on ESC key
   useEffect(() => {
@@ -68,6 +75,48 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       // These will be added in future updates
     } as Place;
   }
+
+  // Handle Tabelog button click
+  const handleTabelogClick = async () => {
+    if (!restaurantData?.restaurant) {
+      setUpdateError('Restaurant data not available');
+      return;
+    }
+
+    setIsUpdatingJaName(true);
+    setUpdateError(null);
+
+    try {
+      // 1. Get Japanese name from Google Maps
+      const nameJa = await getJapaneseName(placeId);
+      if (!nameJa) {
+        setUpdateError('Could not retrieve Japanese name from Google Maps');
+        setIsUpdatingJaName(false);
+        return;
+      }
+
+      setJapaneseName(nameJa);
+
+      // 2. Update restaurant with Japanese name
+      await updateRestaurant(restaurantData.restaurant.id, {
+        name_ja: nameJa
+      });
+
+      // 3. TODO: Call Spider Service with name_ja
+      // const tabelogResults = await searchTabelog({
+      //     google_id: placeId,
+      //     name_ja: nameJa,
+      //     area: extractArea(place.formattedAddress)
+      // });
+
+      console.log(`✅ Updated restaurant with Japanese name: ${nameJa}`);
+    } catch (error) {
+      console.error('Failed to update restaurant:', error);
+      setUpdateError(error instanceof Error ? error.message : 'Failed to update restaurant');
+    } finally {
+      setIsUpdatingJaName(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -220,6 +269,44 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                     </div>
                   )}
                 </div>
+
+                {/* Tabelog Integration - Only show if restaurant data available */}
+                {restaurantData?.restaurant && (
+                  <div className="pt-4 border-t border-zinc-700">
+                    <button
+                      onClick={handleTabelogClick}
+                      disabled={isUpdatingJaName}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                    >
+                      {isUpdatingJaName ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Updating...
+                        </span>
+                      ) : (
+                        '🍜 Search Tabelog'
+                      )}
+                    </button>
+
+                    {/* Japanese Name Display */}
+                    {japaneseName && (
+                      <div className="mt-3 p-3 bg-green-900/30 border border-green-700/50 rounded-lg">
+                        <p className="text-sm text-green-400 font-medium">
+                          ✓ Japanese name: {japaneseName}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Error Display */}
+                    {updateError && (
+                      <div className="mt-3 p-3 bg-red-900/30 border border-red-700/50 rounded-lg">
+                        <p className="text-sm text-red-400">
+                          ✗ {updateError}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Opening Hours Details */}
                 {place.currentOpeningHours?.weekdayDescriptions && (
