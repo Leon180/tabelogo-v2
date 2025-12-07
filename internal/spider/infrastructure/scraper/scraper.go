@@ -235,6 +235,11 @@ func (s *Scraper) newCollector() *colly.Collector {
 
 // buildSearchURL builds the Tabelog search URL
 func (s *Scraper) buildSearchURL(area, placeName string) string {
+	s.logger.Info("🔧 Building Tabelog search URL",
+		zap.String("input_area", area),
+		zap.String("input_place_name", placeName),
+	)
+
 	// Map Google Maps address to Tabelog area code
 	// Example: "Meguro, Tokyo" -> "tokyo/A1316"
 	// Example: "4-chōme-6-8 Komaba" -> "tokyo" (default if no match)
@@ -246,7 +251,14 @@ func (s *Scraper) buildSearchURL(area, placeName string) string {
 	params.Add("sk", placeName)
 	params.Add("sw", placeName)
 
-	return baseURL + "?" + params.Encode()
+	finalURL := baseURL + "?" + params.Encode()
+
+	s.logger.Info("✅ Tabelog URL constructed",
+		zap.String("tabelog_area_code", tabelogArea),
+		zap.String("final_url", finalURL),
+	)
+
+	return finalURL
 }
 
 // Helper functions

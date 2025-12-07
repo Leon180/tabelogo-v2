@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -20,17 +21,22 @@ func NewAreaMapper() *AreaMapper {
 // MapToTabelogArea converts a Google Maps address to Tabelog area code
 // Example: "Meguro, Tokyo" -> "tokyo/A1316"
 func (m *AreaMapper) MapToTabelogArea(address string) string {
+	originalAddress := address
+
 	// Normalize address
 	address = strings.ToLower(strings.TrimSpace(address))
 
 	// Try to find matching area
 	for areaName, areaCode := range m.areaCodeMap {
 		if strings.Contains(address, areaName) {
+			// Log successful mapping
+			fmt.Printf("🗺️  Area Mapper: '%s' -> '%s' (matched '%s')\n", originalAddress, areaCode, areaName)
 			return areaCode
 		}
 	}
 
 	// Default to Tokyo general search if no specific area found
+	fmt.Printf("⚠️  Area Mapper: '%s' -> 'tokyo' (no match found, using default)\n", originalAddress)
 	return "tokyo"
 }
 
