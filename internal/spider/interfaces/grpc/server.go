@@ -63,13 +63,13 @@ func (s *SpiderServer) SearchSimilarRestaurants(
 	protoRestaurants := make([]*spiderv1.TabelogRestaurant, 0, len(results))
 	for _, r := range results {
 		protoRestaurants = append(protoRestaurants, &spiderv1.TabelogRestaurant{
-			Link:        r.Link,
-			Name:        r.Name,
-			Rating:      r.Rating,
-			RatingCount: int32(r.RatingCount),
-			Bookmarks:   int32(r.Bookmarks),
-			Phone:       r.Phone,
-			Types:       r.Types,
+			Link:        r.Link(),
+			Name:        r.Name(),
+			Rating:      r.Rating(),
+			RatingCount: int32(r.RatingCount()),
+			Bookmarks:   int32(r.Bookmarks()),
+			Phone:       r.Phone(),
+			Types:       r.Types(),
 		})
 	}
 
@@ -102,7 +102,7 @@ func (s *SpiderServer) GetRestaurantPhotos(
 	}
 
 	// Scrape photos
-	photos, err := s.scraper.ScrapePhotos(ctx, req.TabelogLink)
+	photos, err := s.scraper.ScrapePhotos(req.TabelogLink)
 	if err != nil {
 		s.logger.Error("Failed to scrape photos",
 			zap.String("google_id", req.GoogleId),
