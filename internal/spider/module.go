@@ -4,6 +4,7 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/spider/application"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure"
+	spidergrpc "github.com/Leon180/tabelogo-v2/internal/spider/interfaces/grpc"
 	"github.com/Leon180/tabelogo-v2/internal/spider/interfaces/http"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/Leon180/tabelogo-v2/pkg/logger"
@@ -27,4 +28,5 @@ var Module = fx.Module("spider",
 
 	// Interface layer
 	http.Module,
+	spidergrpc.Module,
 )
