@@ -157,34 +157,19 @@ func (s *restaurantService) UpdateRestaurant(ctx context.Context, id uuid.UUID, 
 	// Get existing restaurant
 	restaurant, err := s.restaurantRepo.FindByID(ctx, id)
 	if err != nil {
+		s.logger.Error("Failed to find restaurant for update", zap.String("id", id.String()), zap.Error(err))
 		return nil, err
 	}
 
-	// Update details
-	restaurant.UpdateDetails(
-		req.Name,
-		req.Address,
-		req.PriceRange,
-		req.CuisineType,
-		req.Phone,
-		req.Website,
-	)
-
-	// Update rating
-	if req.Rating > 0 {
-		restaurant.UpdateRating(req.Rating)
+	// Update Japanese name if provided
+	if req.NameJa != "" {
+		restaurant.UpdateNameJa(req.NameJa)
+		s.logger.Info("Updating restaurant Japanese name",
+			zap.String("id", id.String()),
+			zap.String("name_ja", req.NameJa))
 	}
 
-	// Update location
-	if req.Latitude != 0 && req.Longitude != 0 {
-		location, err := model.NewLocation(req.Latitude, req.Longitude)
-		if err != nil {
-			return nil, domainerrors.ErrInvalidLocation
-		}
-		restaurant.UpdateLocation(location)
-	}
-
-	// Save changes
+	// Save updated restaurant
 	if err := s.restaurantRepo.Update(ctx, restaurant); err != nil {
 		s.logger.Error("Failed to update restaurant", zap.String("id", id.String()), zap.Error(err))
 		return nil, err

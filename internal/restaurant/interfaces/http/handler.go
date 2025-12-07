@@ -120,6 +120,67 @@ func (h *RestaurantHandler) GetRestaurant(c *gin.Context) {
 	})
 }
 
+// UpdateRestaurant godoc
+// @Summary Update a restaurant
+// @Description Update restaurant details (currently supports Japanese name)
+// @Tags restaurants
+// @Accept json
+// @Produce json
+// @Param id path string true "Restaurant ID"
+// @Param request body UpdateRestaurantRequest true "Update request"
+// @Success 200 {object} RestaurantResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /restaurants/{id} [patch]
+func (h *RestaurantHandler) UpdateRestaurant(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid restaurant ID",
+		})
+		return
+	}
+
+	var req UpdateRestaurantRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "invalid_request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Map HTTP DTO to Application DTO
+	appReq := application.UpdateRestaurantRequest{
+		NameJa: req.NameJa,
+	}
+
+	restaurant, err := h.service.UpdateRestaurant(c.Request.Context(), id, appReq)
+	if err != nil {
+		if err == domainerrors.ErrRestaurantNotFound {
+			c.JSON(http.StatusNotFound, ErrorResponse{
+				Error:   "not_found",
+				Message: "Restaurant not found",
+			})
+			return
+		}
+
+		h.logger.Error("Failed to update restaurant", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "internal_error",
+			Message: "Failed to update restaurant",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, RestaurantResponse{
+		Restaurant: toRestaurantDTO(restaurant),
+	})
+}
+
 // SearchRestaurants godoc
 // @Summary Search restaurants
 // @Description Search restaurants by query string

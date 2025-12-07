@@ -76,6 +76,7 @@ func RegisterRoutes(
 		{
 			restaurants.POST("", handler.CreateRestaurant)
 			restaurants.GET("/:id", handler.GetRestaurant)
+			restaurants.PATCH("/:id", handler.UpdateRestaurant)
 			restaurants.GET("/search", handler.SearchRestaurants)
 			restaurants.GET("/quick-search/:place_id", handler.QuickSearchByPlaceID)
 		}

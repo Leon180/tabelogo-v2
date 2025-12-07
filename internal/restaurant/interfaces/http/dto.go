@@ -23,6 +23,11 @@ type CreateRestaurantRequest struct {
 	Website     string                 `json:"website"`
 }
 
+// UpdateRestaurantRequest represents the HTTP request to update a restaurant
+type UpdateRestaurantRequest struct {
+	NameJa string `json:"name_ja"`
+}
+
 type AddFavoriteRequest struct {
 	UserID       string `json:"user_id" binding:"required"`
 	RestaurantID string `json:"restaurant_id" binding:"required"`
