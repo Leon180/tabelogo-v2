@@ -73,18 +73,17 @@ func RegisterRoutes(
 	// API routes
 	api := router.Group("/api/v1/spider")
 	{
+		// Handle OPTIONS for CORS preflight - must match each specific route
+		api.OPTIONS("/scrape", func(c *gin.Context) {
+			c.Status(http.StatusNoContent)
+		})
+		api.OPTIONS("/jobs/:job_id", func(c *gin.Context) {
+			c.Status(http.StatusNoContent)
+		})
+
 		api.POST("/scrape", handler.Scrape)
 		api.GET("/jobs/:job_id", handler.GetJobStatus)
 	}
-
-	// Handle OPTIONS for all routes (CORS preflight)
-	router.NoRoute(func(c *gin.Context) {
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-	})
 
 	// Lifecycle hooks
 	lc.Append(fx.Hook{
