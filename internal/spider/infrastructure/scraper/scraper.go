@@ -120,8 +120,18 @@ func (s *Scraper) scrapeLinks(area, placeName string) ([]string, error) {
 	})
 
 	searchURL := s.buildSearchURL(area, placeName)
+	s.logger.Info("Visiting Tabelog search URL",
+		zap.String("url", searchURL),
+		zap.String("area", area),
+		zap.String("place_name", placeName),
+	)
+
 	err := c.Visit(searchURL)
 	if err != nil {
+		s.logger.Error("Failed to visit search URL",
+			zap.String("url", searchURL),
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
@@ -223,11 +233,20 @@ func (s *Scraper) newCollector() *colly.Collector {
 
 // buildSearchURL builds the Tabelog search URL
 func (s *Scraper) buildSearchURL(area, placeName string) string {
-	baseURL := fmt.Sprintf("https://tabelog.com/%s/rstLst/", area)
+	// Use Tokyo general search as the area parameter is an address, not a Tabelog area code
+	// Tabelog will search across all of Tokyo based on the search keywords
+	baseURL := "https://tabelog.com/tokyo/rstLst/"
 	params := url.Values{}
 	params.Add("vs", "1")
-	params.Add("sk", placeName)
-	params.Add("sw", placeName)
+
+	// Combine place name and area for better search results
+	searchQuery := placeName
+	if area != "" {
+		searchQuery = placeName + " " + area
+	}
+
+	params.Add("sk", searchQuery)
+	params.Add("sw", searchQuery)
 
 	return baseURL + "?" + params.Encode()
 }

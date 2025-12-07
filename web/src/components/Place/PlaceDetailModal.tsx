@@ -108,9 +108,9 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       // 3. Call Spider Service to search Tabelog
       const tabelogResponse = await searchTabelog({
         google_id: placeId,
-        place_name: place.displayName?.text || '',
+        place_name: place?.displayName?.text || '',
         place_name_ja: nameJa,
-        area: extractArea(place.formattedAddress || ''),
+        area: extractArea(place?.formattedAddress || ''),
         max_results: 10
       });
 
