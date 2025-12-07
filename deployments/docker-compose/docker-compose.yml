@@ -274,36 +274,39 @@ services:
 
   # ==================== Monitoring & Tools ====================
 
-  # Prometheus (Commented out for development - file mount error)
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   container_name: tabelogo-prometheus
-  #   ports:
-  #     - "9090:9090"
-  #   volumes:
-  #     - ./deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-  #     - prometheus-data:/prometheus
-  #   command:
-  #     - '--config.file=/etc/prometheus/prometheus.yml'
-  #     - '--storage.tsdb.path=/prometheus'
-  #   networks:
-  #     - tabelogo-network
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tabelogo-prometheus
+    ports:
+      - "9091:9090" # Changed to 9091 to avoid port conflict
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - tabelogo-network
+    restart: unless-stopped
 
-  # Grafana (Commented out for development - not needed without Prometheus)
-  # grafana:
-  #   image: grafana/grafana:latest
-  #   container_name: tabelogo-grafana
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     GF_SECURITY_ADMIN_USER: admin
-  #     GF_SECURITY_ADMIN_PASSWORD: admin
-  #   volumes:
-  #     - grafana-data:/var/lib/grafana
-  #   depends_on:
-  #     - prometheus
-  #   networks:
-  #     - tabelogo-network
+  # Grafana - Metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tabelogo-grafana
+    ports:
+      - "3001:3000" # Changed to 3001 to avoid conflict with Next.js
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: ""
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - tabelogo-network
+    restart: unless-stopped
 
 volumes:
   postgres-auth-data:
