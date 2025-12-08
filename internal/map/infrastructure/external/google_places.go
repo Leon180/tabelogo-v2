@@ -66,7 +66,8 @@ func (c *GooglePlacesClient) GetPlaceDetails(
 
 	c.logger.Info("Calling Google Places API",
 		zap.String("place_id", placeID),
-		zap.String("language", languageCode),
+		zap.String("requested_language", languageCode),
+		zap.String("actual_url", req.URL.String()),
 	)
 
 	// Execute request

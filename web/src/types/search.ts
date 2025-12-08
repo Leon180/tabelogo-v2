@@ -63,6 +63,7 @@ export interface SearchMetadata {
 export interface Place {
     id: string;
     displayName?: DisplayName;
+    area?: string;
     formattedAddress?: string;
     location?: Location;
     rating?: number;

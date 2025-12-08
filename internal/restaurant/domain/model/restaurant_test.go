@@ -211,6 +211,7 @@ func TestReconstructRestaurant(t *testing.T) {
 		id,
 		"Test Restaurant",
 		"Test Restaurant",
+		"Test Restaurant",
 		SourceTabelog,
 		"external123",
 		"Test Address",

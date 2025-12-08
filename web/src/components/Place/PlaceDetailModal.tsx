@@ -64,6 +64,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   function convertRestaurantToPlace(restaurant: any): Place {
     return {
       id: restaurant.external_id,
+      area: restaurant.area,
       displayName: { text: restaurant.name },
       formattedAddress: restaurant.address,
       location: {
@@ -98,7 +99,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
         place_id: placeId,
         language_code: 'ja',
         // Request addressComponents field
-        api_mask: 'id,displayName,formattedAddress,location,addressComponents'
+        api_mask: 'id,displayName'
       });
 
       const nameJa = jaResponse.result?.displayName?.text || place?.displayName?.text || '';
@@ -107,40 +108,26 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       // 2. Extract place data with addressComponents from the Japanese API response
       const placeWithComponents = jaResponse.result || place;
 
-      console.log('📍 Place data from Map Service:', {
-        hasAddressComponents: !!placeWithComponents?.addressComponents,
-        addressComponentsLength: placeWithComponents?.addressComponents?.length,
-        addressComponents: placeWithComponents?.addressComponents,
-        formattedAddress: placeWithComponents?.formattedAddress
-      });
-
-      // 3. Extract area from addressComponents
-      const extractedArea = extractLocalityFromPlace(placeWithComponents);
-
       console.log('🚀 Preparing to call Spider Service:', {
         google_id: placeId,
         place_name: place?.displayName?.text || '',
         place_name_ja: nameJa,
-        extracted_area: extractedArea,
-        original_formatted_address: placeWithComponents?.formattedAddress,
-        has_address_components: !!placeWithComponents?.addressComponents,
-        address_components_count: placeWithComponents?.addressComponents?.length || 0
       });
 
       // 4. Update restaurant with Japanese name AND area
       await updateRestaurant(restaurantData.restaurant.id, {
-        name_ja: nameJa,
-        area: extractedArea  // Add area to restaurant record
+        name_ja: nameJa
       });
 
       console.log('✅ Updated restaurant with name_ja and area');
+      console.log('Area:', place?.area);
 
       // 5. Call Spider Service to search Tabelog
       const tabelogResponse = await searchTabelog({
         google_id: placeId,
         place_name: place?.displayName?.text || '',
         place_name_ja: nameJa,
-        area: extractedArea, // Use extracted area from addressComponents
+        area: place?.area || '', // Use extracted area from addressComponents
         max_results: 10
       });
 

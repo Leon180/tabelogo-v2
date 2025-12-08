@@ -8,6 +8,7 @@ export interface Restaurant {
     id: string;
     name: string;
     name_ja?: string;
+    area?: string;
     source: string;
     external_id: string;
     address: string;
