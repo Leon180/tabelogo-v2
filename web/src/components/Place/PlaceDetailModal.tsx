@@ -81,57 +81,64 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   // Handle Tabelog button click
   const handleTabelogClick = async () => {
     console.log('🍜 Tabelog button clicked');
-    console.log('📍 Place object:', {
-      placeId,
-      displayName: place?.displayName?.text,
-      formattedAddress: place?.formattedAddress,
-      hasAddressComponents: !!place?.addressComponents,
-      addressComponents: place?.addressComponents
-    });
 
     if (!restaurantData?.restaurant) {
       setUpdateError('Restaurant data not available');
       return;
     }
 
-    setIsUpdatingJaName(true);
-    setUpdateError(null);
-    setTabelogResults([]);
-
     try {
-      // 1. Get Japanese name from Google Maps
-      const nameJa = await getJapaneseName(placeId);
-      if (!nameJa) {
-        setUpdateError('Could not retrieve Japanese name from Google Maps');
-        setIsUpdatingJaName(false);
-        return;
-      }
+      setTabelogLoading(true);
+      setUpdateError(null);
 
-      setJapaneseName(nameJa);
-
-      // 2. Update restaurant with Japanese name
-      await updateRestaurant(restaurantData.restaurant.id, {
-        name_ja: nameJa
+      // 1. Get Japanese name from Map Service
+      // IMPORTANT: This call should also return addressComponents
+      console.log('📞 Fetching Japanese name and addressComponents from Map Service');
+      const jaResponse = await mapClient.post('/quick-search', {
+        place_id: placeId,
+        language_code: 'ja',
+        // Request addressComponents field
+        api_mask: 'id,displayName,formattedAddress,location,addressComponents'
       });
 
-      // 3. Call Spider Service to search Tabelog
-      const extractedArea = extractLocalityFromPlace(place);
+      const nameJa = jaResponse.data?.result?.displayName?.text || place?.displayName?.text || '';
+      console.log('✅ Japanese name:', nameJa);
+
+      // 2. Extract place data with addressComponents from the Japanese API response
+      const placeWithComponents = jaResponse.data?.result || place;
+
+      console.log('📍 Place data from Map Service:', {
+        hasAddressComponents: !!placeWithComponents?.addressComponents,
+        addressComponentsLength: placeWithComponents?.addressComponents?.length,
+        addressComponents: placeWithComponents?.addressComponents,
+        formattedAddress: placeWithComponents?.formattedAddress
+      });
+
+      // 3. Extract area from addressComponents
+      const extractedArea = extractLocalityFromPlace(placeWithComponents);
 
       console.log('🚀 Preparing to call Spider Service:', {
         google_id: placeId,
         place_name: place?.displayName?.text || '',
         place_name_ja: nameJa,
         extracted_area: extractedArea,
-        original_formatted_address: place?.formattedAddress,
-        has_address_components: !!place?.addressComponents,
-        address_components_count: place?.addressComponents?.length || 0
+        original_formatted_address: placeWithComponents?.formattedAddress,
+        has_address_components: !!placeWithComponents?.addressComponents,
+        address_components_count: placeWithComponents?.addressComponents?.length || 0
       });
 
+      // 4. Update restaurant with Japanese name
+      await updateRestaurant({
+        google_id: placeId, // Ensure google_id is passed for update
+        name_ja: nameJa
+      });
+
+      // 5. Call Spider Service to search Tabelog
       const tabelogResponse = await searchTabelog({
         google_id: placeId,
         place_name: place?.displayName?.text || '',
         place_name_ja: nameJa,
-        area: extractedArea, // Use addressComponents for better area extraction
+        area: extractedArea, // Use extracted area from addressComponents
         max_results: 10
       });
 
