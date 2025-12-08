@@ -69,6 +69,10 @@ func MapPlaceToRestaurant(place *mapv1.Place) *model.Restaurant {
 	// Extract area from addressComponents (e.g., "Tokyo")
 	area := extractAreaFromAddressComponents(place.AddressComponents)
 
+	// DEBUG: Log conversion
+	log.Printf("[MapPlaceToRestaurant] place_id=%s, name=%s, addressComponents_count=%d, extracted_area=%s",
+		place.Id, place.Name, len(place.AddressComponents), area)
+
 	// Create restaurant with all details in one call
 	restaurant := model.NewRestaurantWithDetails(
 		place.Name,
@@ -94,9 +98,8 @@ func MapPlaceToRestaurant(place *mapv1.Place) *model.Restaurant {
 	return restaurant
 }
 
-// extractAreaFromAddressComponents extracts administrative_area_level_1 from address components
-// This returns the state/prefecture level (e.g., "Tokyo", "Osaka")
-// IMPORTANT: Prioritizes English language codes to ensure area is in English
+// extractAreaFromAddressComponents extracts the administrative area level 1 from address components
+// This is used to get the area (e.g., "Tokyo", "Osaka") for Tabelog search URLs
 func extractAreaFromAddressComponents(components []*mapv1.AddressComponent) string {
 	if len(components) == 0 {
 		return ""
@@ -104,26 +107,33 @@ func extractAreaFromAddressComponents(components []*mapv1.AddressComponent) stri
 
 	var fallbackArea string
 
-	for _, component := range components {
+	// DEBUG: Log input
+	log.Printf("[Area Extraction] Received %d address components", len(components))
+
+	for i, component := range components {
+		log.Printf("[Area Extraction] Component %d: longText=%s, shortText=%s, languageCode=%s, types=%v",
+			i, component.LongText, component.ShortText, component.LanguageCode, component.Types)
+
 		for _, typ := range component.Types {
 			if typ == "administrative_area_level_1" {
+				log.Printf("[Area Extraction] Found administrative_area_level_1: shortText=%s, languageCode=%s",
+					component.ShortText, component.LanguageCode)
+
 				// Prioritize English language code
 				if component.LanguageCode == "en" || component.LanguageCode == "" {
 					if component.ShortText != "" {
-						return component.ShortText
-					}
-					if component.LongText != "" {
-						return component.LongText
+						log.Printf("[Area Extraction] ✅ Using English area: %s", component.ShortText)
+						return component.ShortText // "Tokyo"
 					}
 				}
 
-				// Store as fallback if no English version found yet
+				// Fallback for non-English
 				if fallbackArea == "" {
 					if component.ShortText != "" {
 						fallbackArea = component.ShortText
-					} else if component.LongText != "" {
+						log.Printf("[Area Extraction] Set fallback area: %s", fallbackArea)
+					} else if component.LongText != "" { // Keep long text as fallback if short is empty
 						fallbackArea = component.LongText
-					}
 				}
 			}
 		}

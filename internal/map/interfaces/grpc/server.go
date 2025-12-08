@@ -76,6 +76,13 @@ func (s *Server) QuickSearch(
 	// Convert result to Place proto
 	if placeData, ok := result.Result.(map[string]interface{}); ok {
 		resp.Place = convertToProtoPlace(placeData)
+
+		// DEBUG: Log addressComponents conversion
+		s.logger.Info("gRPC QuickSearch response",
+			zap.String("place_id", req.PlaceId),
+			zap.Int("addressComponents_count", len(resp.Place.AddressComponents)),
+			zap.Bool("has_addressComponents", len(resp.Place.AddressComponents) > 0),
+		)
 	}
 
 	return resp, nil
