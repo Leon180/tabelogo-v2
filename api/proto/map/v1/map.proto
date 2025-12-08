@@ -81,6 +81,15 @@ message Place {
   OpeningHours opening_hours = 12; // Opening hours information
   repeated Photo photos = 13;      // Place photos
   string editorial_summary = 14;   // Editorial summary
+  repeated AddressComponent address_components = 15; // Address components for area extraction
+}
+
+// AddressComponent - Component of a formatted address
+message AddressComponent {
+  string long_text = 1;            // Full name (e.g., "Tokyo")
+  string short_text = 2;           // Abbreviated name (e.g., "Tokyo")
+  repeated string types = 3;       // Component types (e.g., "administrative_area_level_1")
+  string language_code = 4;        // Language code
 }
 
 // Location - Geographic coordinates
