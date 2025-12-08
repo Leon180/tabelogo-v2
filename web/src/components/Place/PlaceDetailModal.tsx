@@ -24,6 +24,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   );
 
   // FALLBACK: Use Map Service if Restaurant Service fails
+  // IMPORTANT: Use English (en) for area extraction and basic info
   const { data: mapData, isLoading: isMapLoading, error: mapError } = useQuickSearch(
     isOpen && restaurantError ? { place_id: placeId, language_code: 'en' } : null
   );

@@ -21,25 +21,6 @@ export interface UseQuickSearchOptions {
  * Hook for Quick Search (place details by ID)
  * Used when user clicks on a map marker
  */
-export function useQuickSearch(
-    request: QuickSearchRequest | null,
-    options?: UseQuickSearchOptions
-): UseQueryResult<QuickSearchResponse, Error> {
-    return useQuery({
-        queryKey: ['quick-search', request?.place_id, request?.language_code],
-        queryFn: () => {
-            if (!request) throw new Error('No request provided');
-            return mapService.quickSearch(request);
-        },
-        enabled: options?.enabled !== false && !!request,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        retry: (failureCount, error) => {
-            // Don't retry on rate limit or validation errors
-            if (error instanceof RateLimitError || error instanceof ValidationError) {
-                return false;
-            }
-            return failureCount < 2;
-        },
     });
 }
 
