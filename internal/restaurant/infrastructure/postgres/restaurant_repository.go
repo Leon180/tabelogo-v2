@@ -18,6 +18,7 @@ type RestaurantORM struct {
 	ID           uuid.UUID      `gorm:"type:uuid;primaryKey"`
 	Name         string         `gorm:"type:varchar(255);not null"`
 	NameJa       string         `gorm:"type:varchar(255)"`
+	Area         string         `gorm:"type:varchar(100)"`
 	Source       string         `gorm:"type:varchar(50);not null"`
 	ExternalID   string         `gorm:"type:varchar(255);not null"`
 	Address      string         `gorm:"type:text"`
@@ -79,6 +80,7 @@ func (r *RestaurantORM) ToDomain() (*model.Restaurant, error) {
 		r.ID,
 		r.Name,
 		r.NameJa,
+		r.Area,
 		model.RestaurantSource(r.Source),
 		r.ExternalID,
 		r.Address,
@@ -121,6 +123,7 @@ func FromDomain(r *model.Restaurant) (*RestaurantORM, error) {
 		ID:           r.ID(),
 		Name:         r.Name(),
 		NameJa:       r.NameJa(),
+		Area:         r.Area(),
 		Source:       string(r.Source()),
 		ExternalID:   r.ExternalID(),
 		Address:      r.Address(),

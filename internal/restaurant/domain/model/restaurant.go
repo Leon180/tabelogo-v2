@@ -20,6 +20,7 @@ type Restaurant struct {
 	id           uuid.UUID
 	name         string
 	nameJa       string // Japanese name for better Tabelog search
+	area         string // Administrative area level 1 (e.g., Tokyo, Osaka)
 	source       RestaurantSource
 	externalID   string
 	address      string
@@ -50,6 +51,7 @@ func NewRestaurant(
 		id:           uuid.New(),
 		name:         name,
 		nameJa:       "", // Will be set later via frontend or update API
+		area:         "", // Will be extracted from Google Maps addressComponents
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -97,6 +99,7 @@ func NewRestaurantWithDetails(
 		id:           uuid.New(),
 		name:         name,
 		nameJa:       "", // Will be set later
+		area:         "", // Will be extracted from Google Maps addressComponents
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -121,6 +124,7 @@ func ReconstructRestaurant(
 	id uuid.UUID,
 	name string,
 	nameJa string,
+	area string,
 	source RestaurantSource,
 	externalID string,
 	address string,
@@ -141,6 +145,7 @@ func ReconstructRestaurant(
 		id:           id,
 		name:         name,
 		nameJa:       nameJa,
+		area:         area,
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -163,6 +168,7 @@ func ReconstructRestaurant(
 func (r *Restaurant) ID() uuid.UUID                    { return r.id }
 func (r *Restaurant) Name() string                     { return r.name }
 func (r *Restaurant) NameJa() string                   { return r.nameJa }
+func (r *Restaurant) Area() string                     { return r.area }
 func (r *Restaurant) Source() RestaurantSource         { return r.source }
 func (r *Restaurant) ExternalID() string               { return r.externalID }
 func (r *Restaurant) Address() string                  { return r.address }
@@ -208,6 +214,12 @@ func (r *Restaurant) UpdateRating(rating float64) {
 // UpdateNameJa updates the Japanese name
 func (r *Restaurant) UpdateNameJa(nameJa string) {
 	r.nameJa = nameJa
+	r.updatedAt = time.Now()
+}
+
+// UpdateArea updates the area
+func (r *Restaurant) UpdateArea(area string) {
+	r.area = area
 	r.updatedAt = time.Now()
 }
 

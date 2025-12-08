@@ -66,6 +66,9 @@ func MapPlaceToRestaurant(place *mapv1.Place) *model.Restaurant {
 	// Set price range from Google's price level
 	priceRange := parsePriceLevel(place.PriceLevel)
 
+	// Extract area from addressComponents (e.g., "Tokyo")
+	area := extractAreaFromAddressComponents(place.AddressComponents)
+
 	// Create restaurant with all details in one call
 	restaurant := model.NewRestaurantWithDetails(
 		place.Name,
@@ -82,7 +85,37 @@ func MapPlaceToRestaurant(place *mapv1.Place) *model.Restaurant {
 		metadata,
 	)
 
+	// Set area if extracted
+	if area != "" {
+		restaurant.UpdateArea(area)
+	}
+
 	return restaurant
+}
+
+// extractAreaFromAddressComponents extracts administrative_area_level_1 from address components
+// This returns the state/prefecture level (e.g., "Tokyo", "Osaka")
+func extractAreaFromAddressComponents(components []*mapv1.AddressComponent) string {
+	if len(components) == 0 {
+		return ""
+	}
+
+	for _, component := range components {
+		for _, typ := range component.Types {
+			if typ == "administrative_area_level_1" {
+				// Return shortText for English name (e.g., "Tokyo")
+				if component.ShortText != "" {
+					return component.ShortText
+				}
+				// Fallback to longText
+				if component.LongText != "" {
+					return component.LongText
+				}
+			}
+		}
+	}
+
+	return ""
 }
 
 // getDayKey extracts the day name from the opening hours text
