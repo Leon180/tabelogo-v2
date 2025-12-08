@@ -50,7 +50,9 @@ func (c *GooglePlacesClient) GetPlaceDetails(
 
 	// Add query parameters
 	q := req.URL.Query()
-	q.Add("languageCode", languageCode)
+	// IMPORTANT: Always use English for addressComponents to ensure area is in English
+	// Even if client requests Japanese, we need English for area extraction
+	q.Add("languageCode", "en")
 	req.URL.RawQuery = q.Encode()
 
 	// Add headers
