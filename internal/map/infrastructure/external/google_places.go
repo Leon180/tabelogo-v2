@@ -50,9 +50,7 @@ func (c *GooglePlacesClient) GetPlaceDetails(
 
 	// Add query parameters
 	q := req.URL.Query()
-	// IMPORTANT: Always use English for addressComponents to ensure area is in English
-	// Even if client requests Japanese, we need English for area extraction
-	q.Add("languageCode", "en")
+	q.Add("languageCode", languageCode)
 	req.URL.RawQuery = q.Encode()
 
 	// Add headers
@@ -66,8 +64,7 @@ func (c *GooglePlacesClient) GetPlaceDetails(
 
 	c.logger.Info("Calling Google Places API",
 		zap.String("place_id", placeID),
-		zap.String("requested_language", languageCode),
-		zap.String("actual_url", req.URL.String()),
+		zap.String("language", languageCode),
 	)
 
 	// Execute request
@@ -100,6 +97,16 @@ func (c *GooglePlacesClient) GetPlaceDetails(
 		c.logger.Error("Failed to parse response", zap.Error(err))
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
+
+	// DEBUG: Log response keys to understand structure
+	keys := make([]string, 0, len(result))
+	for k := range result {
+		keys = append(keys, k)
+	}
+	c.logger.Info("Google API response keys",
+		zap.Strings("keys", keys),
+		zap.Bool("has_addressComponents", result["addressComponents"] != nil),
+	)
 
 	c.logger.Info("Successfully retrieved place details",
 		zap.String("place_id", placeID),

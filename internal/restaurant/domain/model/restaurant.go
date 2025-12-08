@@ -41,6 +41,7 @@ type Restaurant struct {
 // NewRestaurant creates a new restaurant
 func NewRestaurant(
 	name string,
+	area string,
 	source RestaurantSource,
 	externalID string,
 	address string,
@@ -51,7 +52,7 @@ func NewRestaurant(
 		id:           uuid.New(),
 		name:         name,
 		nameJa:       "", // Will be set later via frontend or update API
-		area:         "", // Will be extracted from Google Maps addressComponents
+		area:         area,
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -73,6 +74,7 @@ func NewRestaurant(
 // NewRestaurantWithDetails creates a new restaurant with complete details
 func NewRestaurantWithDetails(
 	name string,
+	area string,
 	source RestaurantSource,
 	externalID string,
 	address string,
@@ -99,7 +101,7 @@ func NewRestaurantWithDetails(
 		id:           uuid.New(),
 		name:         name,
 		nameJa:       "", // Will be set later
-		area:         "", // Will be extracted from Google Maps addressComponents
+		area:         area,
 		source:       source,
 		externalID:   externalID,
 		address:      address,

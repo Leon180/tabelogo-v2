@@ -44,6 +44,7 @@ type RestaurantDTO struct {
 	ID           string                 `json:"id"`
 	Name         string                 `json:"name"`
 	NameJa       string                 `json:"name_ja,omitempty"`
+	Area         string                 `json:"area,omitempty"`
 	Source       string                 `json:"source"`
 	ExternalID   string                 `json:"external_id"`
 	Address      string                 `json:"address"`
@@ -103,6 +104,7 @@ func toRestaurantDTO(r *model.Restaurant) RestaurantDTO {
 		ID:           r.ID().String(),
 		Name:         r.Name(),
 		NameJa:       r.NameJa(),
+		Area:         r.Area(),
 		Source:       string(r.Source()),
 		ExternalID:   r.ExternalID(),
 		Address:      r.Address(),

@@ -15,6 +15,7 @@ func TestNewRestaurant(t *testing.T) {
 
 	restaurant := NewRestaurant(
 		"Sushi Dai",
+		"",
 		SourceGoogle,
 		"ChIJTest123",
 		"Tokyo, Chuo-ku",
@@ -256,6 +257,7 @@ func createTestRestaurant(t *testing.T) *Restaurant {
 
 	return NewRestaurant(
 		"Test Restaurant",
+		"Test Area",
 		SourceGoogle,
 		"test-external-id",
 		"Test Address",

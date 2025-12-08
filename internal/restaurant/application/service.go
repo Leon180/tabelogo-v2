@@ -92,6 +92,7 @@ func (s *restaurantService) CreateRestaurant(ctx context.Context, req CreateRest
 	// Create restaurant
 	restaurant := model.NewRestaurant(
 		req.Name,
+		req.Area,
 		req.Source,
 		req.ExternalID,
 		req.Address,

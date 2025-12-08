@@ -303,6 +303,8 @@ func convertToProtoPlace(data map[string]interface{}) *mapv1.Place {
 				}
 				if width, ok := photoMap["widthPx"].(float64); ok {
 					photo.WidthPx = int32(width)
+				}
+				if height, ok := photoMap["heightPx"].(float64); ok {
 					photo.HeightPx = int32(height)
 				}
 				place.Photos = append(place.Photos, photo)
