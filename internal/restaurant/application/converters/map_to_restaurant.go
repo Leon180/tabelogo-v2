@@ -72,6 +72,7 @@ func MapPlaceToRestaurant(place *mapv1.Place) *model.Restaurant {
 	// Create restaurant with all details in one call
 	restaurant := model.NewRestaurantWithDetails(
 		place.Name,
+		area,
 		model.SourceGoogle,
 		place.Id,
 		place.FormattedAddress,

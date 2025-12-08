@@ -235,7 +235,7 @@ func TestRestaurantService_CreateRestaurant_DuplicateError(t *testing.T) {
 	}
 
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	existingRestaurant := model.NewRestaurant("Existing", model.SourceGoogle, "ChIJTest123", "Tokyo", location)
+	existingRestaurant := model.NewRestaurant("Existing", "Existing", model.SourceGoogle, "ChIJTest123", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByExternalID", ctx, model.SourceGoogle, "ChIJTest123").
 		Return(existingRestaurant, nil)
@@ -288,7 +288,7 @@ func TestRestaurantService_GetRestaurant_Success(t *testing.T) {
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	expectedRestaurant := model.NewRestaurant("Sushi Dai", model.SourceGoogle, "test", "Tokyo", location)
+	expectedRestaurant := model.NewRestaurant("Sushi Dai", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).
 		Return(expectedRestaurant, nil)
@@ -336,7 +336,7 @@ func TestRestaurantService_AddToFavorites_Success(t *testing.T) {
 	userID := uuid.New()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
 	mockFavoriteRepo.On("Exists", ctx, userID, restaurantID).Return(false, nil)
@@ -364,7 +364,7 @@ func TestRestaurantService_AddToFavorites_AlreadyExists(t *testing.T) {
 	userID := uuid.New()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
 	mockFavoriteRepo.On("Exists", ctx, userID, restaurantID).Return(true, nil)
@@ -412,8 +412,8 @@ func TestRestaurantService_SearchRestaurants_Success(t *testing.T) {
 
 	ctx := context.Background()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant1 := model.NewRestaurant("Sushi Dai", model.SourceGoogle, "test1", "Tokyo", location)
-	restaurant2 := model.NewRestaurant("Sushi Saito", model.SourceTabelog, "test2", "Tokyo", location)
+	restaurant1 := model.NewRestaurant("Sushi Dai", "Tokyo", model.SourceGoogle, "test1", "Tokyo", location)
+	restaurant2 := model.NewRestaurant("Sushi Saito", "Tokyo", model.SourceTabelog, "test2", "Tokyo", location)
 	expectedRestaurants := []*model.Restaurant{restaurant1, restaurant2}
 
 	mockRestaurantRepo.On("Search", ctx, "sushi", 20, 0).
@@ -461,7 +461,7 @@ func TestRestaurantService_GetRestaurantByExternalID_Success(t *testing.T) {
 
 	ctx := context.Background()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	expectedRestaurant := model.NewRestaurant("Sushi Dai", model.SourceGoogle, "ChIJTest123", "Tokyo", location)
+	expectedRestaurant := model.NewRestaurant("Sushi Dai", "Tokyo", model.SourceGoogle, "ChIJTest123", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByExternalID", ctx, model.SourceGoogle, "ChIJTest123").
 		Return(expectedRestaurant, nil)
@@ -508,7 +508,7 @@ func TestRestaurantService_UpdateRestaurant_Success(t *testing.T) {
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	existingRestaurant := model.NewRestaurant("Old Name", model.SourceGoogle, "test", "Old Address", location)
+	existingRestaurant := model.NewRestaurant("Old Name", "Old Area", model.SourceGoogle, "test", "Old Address", location)
 
 	req := UpdateRestaurantRequest{
 		Name:        "New Name",
@@ -569,7 +569,7 @@ func TestRestaurantService_UpdateRestaurant_InvalidLocation(t *testing.T) {
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	existingRestaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	existingRestaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	req := UpdateRestaurantRequest{
 		Latitude:  999.0, // Invalid
@@ -638,8 +638,8 @@ func TestRestaurantService_ListRestaurants_Success(t *testing.T) {
 
 	ctx := context.Background()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant1 := model.NewRestaurant("Restaurant 1", model.SourceGoogle, "test1", "Tokyo", location)
-	restaurant2 := model.NewRestaurant("Restaurant 2", model.SourceTabelog, "test2", "Osaka", location)
+	restaurant1 := model.NewRestaurant("Restaurant 1", "Tokyo", model.SourceGoogle, "test1", "Tokyo", location)
+	restaurant2 := model.NewRestaurant("Restaurant 2", "Osaka", model.SourceTabelog, "test2", "Osaka", location)
 	expectedRestaurants := []*model.Restaurant{restaurant1, restaurant2}
 
 	mockRestaurantRepo.On("List", ctx, 20, 0).Return(expectedRestaurants, nil)
@@ -664,7 +664,7 @@ func TestRestaurantService_FindRestaurantsByLocation_Success(t *testing.T) {
 
 	ctx := context.Background()
 	location1, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant1 := model.NewRestaurant("Nearby Restaurant", model.SourceGoogle, "test1", "Tokyo", location1)
+	restaurant1 := model.NewRestaurant("Nearby Restaurant", "Tokyo", model.SourceGoogle, "test1", "Tokyo", location1)
 	expectedRestaurants := []*model.Restaurant{restaurant1}
 
 	mockRestaurantRepo.On("FindByLocation", ctx, 35.6762, 139.6503, 5.0, 10).
@@ -689,7 +689,7 @@ func TestRestaurantService_FindRestaurantsByCuisineType_Success(t *testing.T) {
 
 	ctx := context.Background()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant1 := model.NewRestaurant("Sushi Place", model.SourceGoogle, "test1", "Tokyo", location)
+	restaurant1 := model.NewRestaurant("Sushi Place", "Tokyo", model.SourceGoogle, "test1", "Tokyo", location)
 	restaurant1.UpdateDetails("", "", "", "Japanese", "", "")
 	expectedRestaurants := []*model.Restaurant{restaurant1}
 
@@ -716,7 +716,7 @@ func TestRestaurantService_IncrementRestaurantViewCount_Success(t *testing.T) {
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
 	mockRestaurantRepo.On("Update", ctx, mock.AnythingOfType("*model.Restaurant")).Return(nil)
@@ -1115,7 +1115,7 @@ func TestRestaurantService_AddToFavorites_ExistsError(t *testing.T) {
 	userID := uuid.New()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 	expectedErr := assert.AnError
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
@@ -1141,7 +1141,7 @@ func TestRestaurantService_AddToFavorites_CreateError(t *testing.T) {
 	userID := uuid.New()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 	expectedErr := assert.AnError
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
@@ -1342,7 +1342,7 @@ func TestRestaurantService_UpdateRestaurant_UpdateError(t *testing.T) {
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	existingRestaurant := model.NewRestaurant("Old Name", model.SourceGoogle, "test", "Old Address", location)
+	existingRestaurant := model.NewRestaurant("Old Name", "Old Area", model.SourceGoogle, "test", "Old Address", location)
 	req := UpdateRestaurantRequest{Name: "New Name"}
 	expectedErr := assert.AnError
 
@@ -1367,7 +1367,7 @@ func TestRestaurantService_IncrementRestaurantViewCount_UpdateError(t *testing.T
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 	expectedErr := assert.AnError
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)

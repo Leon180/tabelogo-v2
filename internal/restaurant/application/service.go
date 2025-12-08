@@ -162,6 +162,14 @@ func (s *restaurantService) UpdateRestaurant(ctx context.Context, id uuid.UUID, 
 		return nil, err
 	}
 
+	// Update area if provided
+	if req.Area != "" {
+		restaurant.UpdateArea(req.Area)
+		s.logger.Info("Updating restaurant area",
+			zap.String("id", id.String()),
+			zap.String("area", req.Area))
+	}
+
 	// Update Japanese name if provided
 	if req.NameJa != "" {
 		restaurant.UpdateNameJa(req.NameJa)

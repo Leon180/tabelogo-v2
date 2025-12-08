@@ -37,7 +37,9 @@ func (c *MapServiceClient) QuickSearch(ctx context.Context, placeID string) (*ma
 
 	req := &mapv1.QuickSearchRequest{
 		PlaceId:      placeID,
-		LanguageCode: "en", // Default to English
+		LanguageCode: "en", // Default to English for area extraction
+		// IMPORTANT: Must include addressComponents for area extraction
+		ApiMask: "id,displayName,formattedAddress,location,rating,priceLevel,photos,currentOpeningHours,addressComponents",
 	}
 
 	resp, err := c.client.QuickSearch(ctx, req)
