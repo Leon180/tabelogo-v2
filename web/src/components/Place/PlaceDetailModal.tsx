@@ -7,7 +7,7 @@ import { useRestaurantQuickSearch } from '@/hooks/useRestaurantSearch';
 import { useQuickSearch } from '@/hooks/useMapSearch';
 import { getPlacePhotoUrl, getPlaceholderImageUrl } from '@/lib/utils/getPlacePhotoUrl';
 import { updateRestaurant } from '@/lib/api/restaurant-service';
-import { getJapaneseName } from '@/lib/api/map-service';
+import { getJapaneseName, quickSearch } from '@/lib/api/map-service';
 import { searchTabelog, type TabelogRestaurant } from '@/lib/api/spider-service';
 import type { Place } from '@/types/search';
 
@@ -88,24 +88,23 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
     }
 
     try {
-      setTabelogLoading(true);
+      setIsUpdatingJaName(true);
       setUpdateError(null);
 
-      // 1. Get Japanese name from Map Service
-      // IMPORTANT: This call should also return addressComponents
+      // 1. Get Japanese name and addressComponents from Map Service
       console.log('📞 Fetching Japanese name and addressComponents from Map Service');
-      const jaResponse = await mapClient.post('/quick-search', {
+      const jaResponse = await quickSearch({
         place_id: placeId,
         language_code: 'ja',
         // Request addressComponents field
         api_mask: 'id,displayName,formattedAddress,location,addressComponents'
       });
 
-      const nameJa = jaResponse.data?.result?.displayName?.text || place?.displayName?.text || '';
+      const nameJa = jaResponse.result?.displayName?.text || place?.displayName?.text || '';
       console.log('✅ Japanese name:', nameJa);
 
       // 2. Extract place data with addressComponents from the Japanese API response
-      const placeWithComponents = jaResponse.data?.result || place;
+      const placeWithComponents = jaResponse.result || place;
 
       console.log('📍 Place data from Map Service:', {
         hasAddressComponents: !!placeWithComponents?.addressComponents,
@@ -127,11 +126,13 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
         address_components_count: placeWithComponents?.addressComponents?.length || 0
       });
 
-      // 4. Update restaurant with Japanese name
-      await updateRestaurant({
-        google_id: placeId, // Ensure google_id is passed for update
-        name_ja: nameJa
+      // 4. Update restaurant with Japanese name AND area
+      await updateRestaurant(restaurantData.restaurant.id, {
+        name_ja: nameJa,
+        area: extractedArea  // Add area to restaurant record
       });
+
+      console.log('✅ Updated restaurant with name_ja and area');
 
       // 5. Call Spider Service to search Tabelog
       const tabelogResponse = await searchTabelog({
