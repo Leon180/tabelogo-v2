@@ -303,8 +303,6 @@ func convertToProtoPlace(data map[string]interface{}) *mapv1.Place {
 				}
 				if width, ok := photoMap["widthPx"].(float64); ok {
 					photo.WidthPx = int32(width)
-				}
-				if height, ok := photoMap["heightPx"].(float64); ok {
 					photo.HeightPx = int32(height)
 				}
 				place.Photos = append(place.Photos, photo)
@@ -316,6 +314,32 @@ func convertToProtoPlace(data map[string]interface{}) *mapv1.Place {
 	if summary, ok := data["editorialSummary"].(map[string]interface{}); ok {
 		if text, ok := summary["text"].(string); ok {
 			place.EditorialSummary = text
+		}
+	}
+
+	// Extract addressComponents for area extraction
+	if addressComponents, ok := data["addressComponents"].([]interface{}); ok {
+		for _, ac := range addressComponents {
+			if acMap, ok := ac.(map[string]interface{}); ok {
+				component := &mapv1.AddressComponent{}
+				if longText, ok := acMap["longText"].(string); ok {
+					component.LongText = longText
+				}
+				if shortText, ok := acMap["shortText"].(string); ok {
+					component.ShortText = shortText
+				}
+				if languageCode, ok := acMap["languageCode"].(string); ok {
+					component.LanguageCode = languageCode
+				}
+				if types, ok := acMap["types"].([]interface{}); ok {
+					for _, t := range types {
+						if typeStr, ok := t.(string); ok {
+							component.Types = append(component.Types, typeStr)
+						}
+					}
+				}
+				place.AddressComponents = append(place.AddressComponents, component)
+			}
 		}
 	}
 
