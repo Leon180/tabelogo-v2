@@ -95,27 +95,40 @@ func MapPlaceToRestaurant(place *mapv1.Place) *model.Restaurant {
 
 // extractAreaFromAddressComponents extracts administrative_area_level_1 from address components
 // This returns the state/prefecture level (e.g., "Tokyo", "Osaka")
+// IMPORTANT: Prioritizes English language codes to ensure area is in English
 func extractAreaFromAddressComponents(components []*mapv1.AddressComponent) string {
 	if len(components) == 0 {
 		return ""
 	}
 
+	var fallbackArea string
+
 	for _, component := range components {
 		for _, typ := range component.Types {
 			if typ == "administrative_area_level_1" {
-				// Return shortText for English name (e.g., "Tokyo")
-				if component.ShortText != "" {
-					return component.ShortText
+				// Prioritize English language code
+				if component.LanguageCode == "en" || component.LanguageCode == "" {
+					if component.ShortText != "" {
+						return component.ShortText
+					}
+					if component.LongText != "" {
+						return component.LongText
+					}
 				}
-				// Fallback to longText
-				if component.LongText != "" {
-					return component.LongText
+
+				// Store as fallback if no English version found yet
+				if fallbackArea == "" {
+					if component.ShortText != "" {
+						fallbackArea = component.ShortText
+					} else if component.LongText != "" {
+						fallbackArea = component.LongText
+					}
 				}
 			}
 		}
 	}
 
-	return ""
+	return fallbackArea
 }
 
 // getDayKey extracts the day name from the opening hours text
