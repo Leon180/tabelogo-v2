@@ -20,8 +20,11 @@ RUN GOWORK=off go mod download
 WORKDIR /app
 COPY . .
 
-# Build the application (with GOWORK=off)
+# Ensure go.sum is up to date (with GOWORK=off)
 WORKDIR /app/cmd/spider-service
+RUN GOWORK=off go mod tidy
+
+# Build the application (with GOWORK=off)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off \
     go build -ldflags="-w -s" -o /app/bin/spider-service .
 
