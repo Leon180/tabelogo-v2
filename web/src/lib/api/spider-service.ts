@@ -145,7 +145,7 @@ export async function searchTabelog(
             }
 
             // Handle completion
-            if (status.status === 'completed') {
+            if (status.status === 'COMPLETED') {
                 eventSource.close();
                 console.log('✅ Scraping completed, got', status.results?.length, 'results');
                 resolve({
@@ -153,7 +153,7 @@ export async function searchTabelog(
                     restaurants: status.results || [],
                     total_found: status.results?.length || 0,
                 });
-            } else if (status.status === 'failed') {
+            } else if (status.status === 'FAILED') {
                 eventSource.close();
                 console.error('❌ Scraping failed:', status.error);
                 reject(new ScrapingError(status.error || 'Scraping failed'));
