@@ -1,6 +1,8 @@
 package converters
 
 import (
+	"log"
+
 	mapv1 "github.com/Leon180/tabelogo-v2/api/gen/map/v1"
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/domain/model"
 )
@@ -132,11 +134,19 @@ func extractAreaFromAddressComponents(components []*mapv1.AddressComponent) stri
 					if component.ShortText != "" {
 						fallbackArea = component.ShortText
 						log.Printf("[Area Extraction] Set fallback area: %s", fallbackArea)
-					} else if component.LongText != "" { // Keep long text as fallback if short is empty
+					} else if component.LongText != "" {
 						fallbackArea = component.LongText
+						log.Printf("[Area Extraction] Set fallback area (longText): %s", fallbackArea)
+					}
 				}
 			}
 		}
+	}
+
+	if fallbackArea != "" {
+		log.Printf("[Area Extraction] ⚠️ Using fallback area: %s", fallbackArea)
+	} else {
+		log.Printf("[Area Extraction] ❌ No area found!")
 	}
 
 	return fallbackArea
