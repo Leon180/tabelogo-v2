@@ -1,9 +1,13 @@
 package http
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/application/usecases"
+	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -12,6 +16,7 @@ import (
 type SpiderHandler struct {
 	scrapeUseCase       *usecases.ScrapeRestaurantUseCase
 	getJobStatusUseCase *usecases.GetJobStatusUseCase
+	resultCache         repositories.ResultCacheRepository
 	logger              *zap.Logger
 }
 
@@ -19,11 +24,13 @@ type SpiderHandler struct {
 func NewSpiderHandler(
 	scrapeUseCase *usecases.ScrapeRestaurantUseCase,
 	getJobStatusUseCase *usecases.GetJobStatusUseCase,
+	resultCache repositories.ResultCacheRepository,
 	logger *zap.Logger,
 ) *SpiderHandler {
 	return &SpiderHandler{
 		scrapeUseCase:       scrapeUseCase,
 		getJobStatusUseCase: getJobStatusUseCase,
+		resultCache:         resultCache,
 		logger:              logger.With(zap.String("component", "http_handler")),
 	}
 }
@@ -55,6 +62,38 @@ func (h *SpiderHandler) Scrape(c *gin.Context) {
 		zap.String("place_name", req.PlaceName),
 	)
 
+	// Check cache first
+	cached, err := h.resultCache.Get(c.Request.Context(), req.GoogleID)
+	if err == nil && cached != nil {
+		h.logger.Info("Returning cached results",
+			zap.String("google_id", req.GoogleID),
+			zap.Int("results_count", len(cached.Results)),
+		)
+		// Return cached results immediately
+		results := make([]TabelogRestaurantDTO, len(cached.Results))
+		for i, r := range cached.Results {
+			results[i] = TabelogRestaurantDTO{
+				Link:        r.Link(),
+				Name:        r.Name(),
+				Rating:      r.Rating(),
+				RatingCount: r.RatingCount(),
+				Bookmarks:   r.Bookmarks(),
+				Phone:       r.Phone(),
+				Types:       r.Types(),
+				Photos:      r.Photos(),
+			}
+		}
+		c.JSON(http.StatusOK, CachedResultsResponse{
+			GoogleID:   req.GoogleID,
+			Results:    results,
+			TotalFound: len(results),
+			FromCache:  true,
+			CachedAt:   cached.CachedAt.Format(time.RFC3339),
+		})
+		return
+	}
+
+	// Start scraping job
 	resp, err := h.scrapeUseCase.Execute(c.Request.Context(), usecases.ScrapeRestaurantRequest{
 		GoogleID:  req.GoogleID,
 		Area:      req.Area,
@@ -138,6 +177,106 @@ func (h *SpiderHandler) GetJobStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+// CachedResultsResponse is the response for cached results
+type CachedResultsResponse struct {
+	GoogleID   string                 `json:"google_id"`
+	Results    []TabelogRestaurantDTO `json:"results"`
+	TotalFound int                    `json:"total_found"`
+	FromCache  bool                   `json:"from_cache"`
+	CachedAt   string                 `json:"cached_at"`
+}
+
+// StreamJobStatus handles GET /api/v1/spider/jobs/:job_id/stream
+// Streams job status updates via Server-Sent Events (SSE)
+func (h *SpiderHandler) StreamJobStatus(c *gin.Context) {
+	jobIDStr := c.Param("job_id")
+
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
+
+	h.logger.Info("Starting SSE stream", zap.String("job_id", jobIDStr))
+
+	// Create ticker for polling job status
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	// Stream updates
+	for {
+		select {
+		case <-ticker.C:
+			job, err := h.getJobStatusUseCase.Execute(c.Request.Context(), jobIDStr)
+			if err != nil {
+				// Send error event
+				c.SSEvent("error", fmt.Sprintf(`{"error":"%s"}`, err.Error()))
+				c.Writer.Flush()
+				return
+			}
+
+			// Build status response
+			status := JobStatusResponse{
+				JobID:     job.ID().String(),
+				GoogleID:  job.GoogleID(),
+				Status:    string(job.Status()),
+				CreatedAt: job.CreatedAt().Format("2006-01-02T15:04:05Z07:00"),
+			}
+
+			if job.Error() != "" {
+				status.Error = job.Error()
+			}
+
+			if job.CompletedAt() != nil {
+				completedAt := job.CompletedAt().Format("2006-01-02T15:04:05Z07:00")
+				status.CompletedAt = &completedAt
+			}
+
+			if len(job.Results()) > 0 {
+				status.Results = make([]TabelogRestaurantDTO, len(job.Results()))
+				for i, r := range job.Results() {
+					status.Results[i] = TabelogRestaurantDTO{
+						Link:        r.Link(),
+						Name:        r.Name(),
+						Rating:      r.Rating(),
+						RatingCount: r.RatingCount(),
+						Bookmarks:   r.Bookmarks(),
+						Phone:       r.Phone(),
+						Types:       r.Types(),
+						Photos:      r.Photos(),
+					}
+				}
+
+				// Cache results when completed
+				if job.Status() == "completed" {
+					if err := h.resultCache.Set(c.Request.Context(), job.GoogleID(), job.Results(), 24*time.Hour); err != nil {
+						h.logger.Error("Failed to cache results", zap.Error(err))
+					}
+				}
+			}
+
+			// Send status event
+			data, _ := json.Marshal(status)
+			c.SSEvent("status", string(data))
+			c.Writer.Flush()
+
+			// Close stream if job is done
+			if job.Status() == "completed" || job.Status() == "failed" {
+				h.logger.Info("Job finished, closing SSE stream",
+					zap.String("job_id", jobIDStr),
+					zap.String("status", string(job.Status())),
+				)
+				return
+			}
+
+		case <-c.Request.Context().Done():
+			h.logger.Info("Client disconnected from SSE stream", zap.String("job_id", jobIDStr))
+			return
+		}
+	}
 }
 
 // ErrorResponse is the error response

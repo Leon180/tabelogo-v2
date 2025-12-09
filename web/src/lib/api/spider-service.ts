@@ -35,6 +35,23 @@ export interface SearchTabelogResponse {
     google_id: string;
     restaurants: TabelogRestaurant[];
     total_found: number;
+    from_cache?: boolean;
+    cached_at?: string;
+}
+
+export interface ScrapeJobResponse {
+    job_id: string;
+    status: string;
+}
+
+export interface JobStatusResponse {
+    job_id: string;
+    google_id: string;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    results?: TabelogRestaurant[];
+    error?: string;
+    created_at: string;
+    completed_at?: string;
 }
 
 // ============================================
@@ -83,20 +100,81 @@ spiderClient.interceptors.response.use(
 // ============================================
 
 /**
- * Search Tabelog for similar restaurants
- * Uses Spider Service to scrape Tabelog website
+ * Search Tabelog for similar restaurants using SSE for real-time updates
  * 
  * @param params - Search parameters including place name and area
+ * @param onProgress - Optional callback for progress updates
  * @returns List of Tabelog restaurants matching the search
  */
 export async function searchTabelog(
-    params: SearchTabelogRequest
+    params: SearchTabelogRequest,
+    onProgress?: (status: string) => void
 ): Promise<SearchTabelogResponse> {
-    const response = await spiderClient.post<SearchTabelogResponse>(
+    // 1. Start scraping job
+    const response = await spiderClient.post<ScrapeJobResponse | SearchTabelogResponse>(
         '/api/v1/spider/scrape',
         params
     );
-    return response.data;
+
+    // Check if we got cached results (200 OK)
+    if ('restaurants' in response.data) {
+        console.log('✅ Got cached results immediately');
+        return response.data as SearchTabelogResponse;
+    }
+
+    // 2. Got job ID (202 Accepted), subscribe to SSE stream
+    const jobResponse = response.data as ScrapeJobResponse;
+    const jobId = jobResponse.job_id;
+
+    console.log('🔄 Starting SSE stream for job:', jobId);
+
+    return new Promise((resolve, reject) => {
+        const eventSource = new EventSource(
+            `http://localhost:18084/api/v1/spider/jobs/${jobId}/stream`
+        );
+
+        // Handle status updates
+        eventSource.addEventListener('status', (event) => {
+            const status: JobStatusResponse = JSON.parse(event.data);
+
+            console.log('📡 SSE status update:', status.status);
+
+            // Update progress
+            if (onProgress) {
+                onProgress(status.status);
+            }
+
+            // Handle completion
+            if (status.status === 'completed') {
+                eventSource.close();
+                console.log('✅ Scraping completed, got', status.results?.length, 'results');
+                resolve({
+                    google_id: status.google_id,
+                    restaurants: status.results || [],
+                    total_found: status.results?.length || 0,
+                });
+            } else if (status.status === 'failed') {
+                eventSource.close();
+                console.error('❌ Scraping failed:', status.error);
+                reject(new ScrapingError(status.error || 'Scraping failed'));
+            }
+        });
+
+        // Handle errors
+        eventSource.addEventListener('error', (event: any) => {
+            const errorData = event.data ? JSON.parse(event.data) : null;
+            eventSource.close();
+            console.error('❌ SSE error:', errorData);
+            reject(new SpiderServiceError(errorData?.error || 'SSE connection failed'));
+        });
+
+        // Handle connection errors
+        eventSource.onerror = () => {
+            eventSource.close();
+            console.error('❌ SSE connection error');
+            reject(new SpiderServiceError('Failed to connect to SSE stream'));
+        };
+    });
 }
 
 // ============================================

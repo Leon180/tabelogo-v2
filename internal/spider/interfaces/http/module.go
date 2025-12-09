@@ -80,9 +80,13 @@ func RegisterRoutes(
 		api.OPTIONS("/jobs/:job_id", func(c *gin.Context) {
 			c.Status(http.StatusNoContent)
 		})
+		api.OPTIONS("/jobs/:job_id/stream", func(c *gin.Context) {
+			c.Status(http.StatusNoContent)
+		})
 
 		api.POST("/scrape", handler.Scrape)
 		api.GET("/jobs/:job_id", handler.GetJobStatus)
+		api.GET("/jobs/:job_id/stream", handler.StreamJobStatus) // SSE endpoint
 	}
 
 	// Lifecycle hooks

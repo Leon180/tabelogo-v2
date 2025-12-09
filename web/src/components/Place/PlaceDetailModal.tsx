@@ -39,6 +39,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   const [japaneseName, setJapaneseName] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [tabelogResults, setTabelogResults] = useState<TabelogRestaurant[]>([]);
+  const [scrapingProgress, setScrapingProgress] = useState<string>('');
 
   // Close modal on ESC key
   useEffect(() => {
@@ -122,25 +123,39 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       console.log('✅ Updated restaurant with name_ja and area');
       console.log('Area:', place?.area);
 
-      // 5. Call Spider Service to search Tabelog
+      // 5. Call Spider Service to search Tabelog with SSE progress
+      setScrapingProgress('Starting Tabelog search...');
+
       const tabelogResponse = await searchTabelog({
         google_id: placeId,
         place_name: place?.displayName?.text || '',
         place_name_ja: nameJa,
         area: place?.area || '', // Use extracted area from addressComponents
         max_results: 10
+      }, (status) => {
+        // Update progress based on job status
+        const statusMessages: Record<string, string> = {
+          'pending': 'Waiting to start...',
+          'running': 'Scraping Tabelog...',
+          'completed': 'Complete!',
+          'failed': 'Failed'
+        };
+        setScrapingProgress(statusMessages[status] || status);
       });
 
       console.log('✅ Spider Service response:', {
         total_found: tabelogResponse.total_found,
-        restaurants_count: tabelogResponse.restaurants?.length || 0
+        restaurants_count: tabelogResponse.restaurants?.length || 0,
+        from_cache: tabelogResponse.from_cache
       });
 
       setTabelogResults(tabelogResponse.restaurants);
+      setScrapingProgress(''); // Clear progress
       console.log(`✅ Found ${tabelogResponse.total_found} Tabelog restaurants`);
     } catch (error) {
       console.error('Failed to search Tabelog:', error);
       setUpdateError(error instanceof Error ? error.message : 'Failed to search Tabelog');
+      setScrapingProgress(''); // Clear progress on error
     } finally {
       setIsUpdatingJaName(false);
     }
