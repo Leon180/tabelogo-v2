@@ -2,6 +2,7 @@
 
 # Variables
 DOCKER_COMPOSE = docker-compose -f deployments/docker-compose/docker-compose.yml
+DOCKER_COMPOSE_FILE = deployments/docker-compose/docker-compose.yml
 SERVICES = auth-service restaurant-service map-service spider-service
 
 ## help: Show this help message
@@ -77,22 +78,10 @@ clean:
 	@echo "=> Cleanup complete"
 
 ## build: Build all microservices
+.PHONY: build
 build:
 	@echo "=> Building all microservices..."
-	@for service in $(SERVICES); do \
-		echo "Building $$service..."; \
-		cd cmd/$$service && GOWORK=off go build -o ../../bin/$$service . && cd ../..; \
-	done
-	@echo "=> Build complete"
-
-## test: Run all tests
-test:
-	@echo "=> Running tests..."
-	@for service in $(SERVICES); do \
-		echo "Testing $$service..."; \
-		cd cmd/$$service && go test ./... -v && cd ../..; \
-	done
-	@echo "=> Tests complete"
+	docker-compose -f $(DOCKER_COMPOSE_FILE) build
 
 ## lint: Run code linter
 lint:
