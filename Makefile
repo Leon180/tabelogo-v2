@@ -1,8 +1,13 @@
 .PHONY: help init up down restart logs ps clean build test lint proto migrate
 
 # Variables
-DOCKER_COMPOSE = docker-compose -f deployments/docker-compose/docker-compose.yml
-DOCKER_COMPOSE_FILE = deployments/docker-compose/docker-compose.yml
+# Docker configuration
+DOCKER_COMPOSE_FILE := deployments/docker-compose/docker-compose.yml
+DOCKER_COMPOSE := docker-compose -f $(DOCKER_COMPOSE_FILE)
+
+# Enable BuildKit for faster builds and caching
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
 SERVICES = auth-service restaurant-service map-service spider-service
 
 ## help: Show this help message
@@ -76,6 +81,27 @@ clean:
 	@echo "=> Cleaning up all containers and volumes..."
 	$(DOCKER_COMPOSE) down -v --remove-orphans
 	@echo "=> Cleanup complete"
+
+## docker-clean: Clean unused Docker resources (safe)
+docker-clean:
+	@echo "=> Cleaning Docker resources..."
+	@docker container prune -f
+	@docker image prune -f
+	@docker volume prune -f
+	@docker buildx prune --keep-storage 5GB -f 2>/dev/null || true
+	@echo "=> Docker cleanup complete"
+
+## docker-clean-all: Remove ALL unused Docker resources (WARNING: destructive)
+docker-clean-all:
+	@echo "WARNING: This will remove ALL unused Docker resources!"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [ "$$REPLY" = "y" ] || [ "$$REPLY" = "Y" ]; then \
+		docker system prune -a --volumes -f; \
+		echo "=> Complete cleanup done"; \
+	else \
+		echo "=> Cleanup cancelled"; \
+	fi
 
 ## build: Build all microservices
 .PHONY: build

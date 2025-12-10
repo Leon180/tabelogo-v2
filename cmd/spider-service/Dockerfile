@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # Spider Service Dockerfile
 FROM golang:1.24-alpine AS builder
 
@@ -12,20 +14,22 @@ COPY go.mod go.sum ./
 COPY pkg/go.mod pkg/go.sum ./pkg/
 COPY cmd/spider-service/go.mod cmd/spider-service/go.sum ./cmd/spider-service/
 
-# Download dependencies (with GOWORK=off to ignore go.work)
+# Download dependencies with cache mount (speeds up rebuilds)
 WORKDIR /app/cmd/spider-service
-RUN GOWORK=off go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOWORK=off go mod download
 
 # Copy source code
 WORKDIR /app
 COPY . .
 
-# Ensure go.sum is up to date (with GOWORK=off)
+# Ensure go.sum is up to date and build with cache mount
 WORKDIR /app/cmd/spider-service
-RUN GOWORK=off go mod tidy
-
-# Build the application (with GOWORK=off)
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOWORK=off go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off \
     go build -ldflags="-w -s" -o /app/bin/spider-service .
 
 # Runtime stage
