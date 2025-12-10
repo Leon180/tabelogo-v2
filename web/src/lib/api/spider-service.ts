@@ -47,7 +47,7 @@ export interface ScrapeJobResponse {
 export interface JobStatusResponse {
     job_id: string;
     google_id: string;
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
     results?: TabelogRestaurant[];
     error?: string;
     created_at: string;
