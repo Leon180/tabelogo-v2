@@ -110,24 +110,29 @@ export async function searchTabelog(
     params: SearchTabelogRequest,
     onProgress?: (status: string) => void
 ): Promise<SearchTabelogResponse> {
-    // 1. Start scraping job
+    // Initiate scrape job
     const response = await spiderClient.post<ScrapeJobResponse | SearchTabelogResponse>(
         '/api/v1/spider/scrape',
         params
     );
 
-    // Check if we got cached results (200 OK)
-    if ('restaurants' in response.data) {
-        console.log('✅ Got cached results immediately');
+    // Check if we got cached results (200 OK with restaurants field)
+    if (response.status === 200 && 'restaurants' in response.data) {
+        console.log('✅ Got cached results:', response.data.restaurants.length, 'restaurants');
         return response.data as SearchTabelogResponse;
     }
 
-    // 2. Got job ID (202 Accepted), subscribe to SSE stream
+    // Otherwise, we got a job ID (202 Accepted or 200 with job_id)
     const jobResponse = response.data as ScrapeJobResponse;
     const jobId = jobResponse.job_id;
 
+    if (!jobId) {
+        throw new ScrapingError('No job ID received from server');
+    }
+
     console.log('🔄 Starting SSE stream for job:', jobId);
 
+    // Subscribe to SSE stream for real-time updates
     return new Promise((resolve, reject) => {
         const eventSource = new EventSource(
             `http://localhost:18084/api/v1/spider/jobs/${jobId}/stream`
