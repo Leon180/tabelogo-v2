@@ -74,14 +74,14 @@ func (h *SpiderHandler) Scrape(c *gin.Context) {
 		results := make([]TabelogRestaurantDTO, len(cached.Results))
 		for i, r := range cached.Results {
 			results[i] = TabelogRestaurantDTO{
-				Link:        r.Link(),
-				Name:        r.Name(),
-				Rating:      r.Rating(),
-				RatingCount: r.RatingCount(),
-				Bookmarks:   r.Bookmarks(),
-				Phone:       r.Phone(),
-				Types:       r.Types(),
-				Photos:      r.Photos(),
+				Link:        r.Link,
+				Name:        r.Name,
+				Rating:      r.Rating,
+				RatingCount: r.RatingCount,
+				Bookmarks:   r.Bookmarks,
+				Phone:       r.Phone,
+				Types:       r.Types,
+				Photos:      r.Photos,
 			}
 		}
 		c.JSON(http.StatusOK, CachedResultsResponse{
@@ -240,14 +240,14 @@ func (h *SpiderHandler) StreamJobStatus(c *gin.Context) {
 				status.Results = make([]TabelogRestaurantDTO, len(job.Results()))
 				for i, r := range job.Results() {
 					status.Results[i] = TabelogRestaurantDTO{
-						Link:        r.Link(),
-						Name:        r.Name(),
-						Rating:      r.Rating(),
-						RatingCount: r.RatingCount(),
-						Bookmarks:   r.Bookmarks(),
-						Phone:       r.Phone(),
-						Types:       r.Types(),
-						Photos:      r.Photos(),
+						Link:        r.Link,
+						Name:        r.Name,
+						Rating:      r.Rating,
+						RatingCount: r.RatingCount,
+						Bookmarks:   r.Bookmarks,
+						Phone:       r.Phone,
+						Types:       r.Types,
+						Photos:      r.Photos,
 					}
 				}
 
