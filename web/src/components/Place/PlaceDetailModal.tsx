@@ -429,7 +429,7 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                                   <h4 className="font-medium text-white truncate">
                                     {restaurant.name}
                                   </h4>
-                                  {restaurant.types.length > 0 && (
+                                  {restaurant.types && restaurant.types.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-1">
                                       {restaurant.types.slice(0, 3).map((type, i) => (
                                         <span
@@ -442,28 +442,34 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                  <div className="flex items-center gap-1">
-                                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                                    <span className="text-white font-medium">
-                                      {restaurant.rating.toFixed(2)}
-                                    </span>
-                                  </div>
-                                  <span className="text-xs text-zinc-400">
-                                    ({restaurant.rating_count} reviews)
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between mt-2">
-                                <div className="flex items-center gap-2">
-                                  {restaurant.bookmarks > 0 && (
+                                <div className="flex flex-col items-end gap-1">
+                                  {restaurant.rating > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-yellow-400">⭐</span>
+                                      <span className="text-sm font-medium text-white">
+                                        {restaurant.rating.toFixed(2)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {restaurant.rating_count > 0 && (
                                     <span className="text-xs text-zinc-400">
-                                      ⭐ {restaurant.bookmarks} saves
+                                      {restaurant.rating_count} reviews
                                     </span>
                                   )}
                                 </div>
-                                <ExternalLink className="w-3 h-3 text-zinc-400" />
                               </div>
+                              {restaurant.photos && restaurant.photos.length > 0 && (
+                                <div className="mt-2 flex gap-2 overflow-x-auto">
+                                  {restaurant.photos.slice(0, 3).map((photo, i) => (
+                                    <img
+                                      key={i}
+                                      src={photo}
+                                      alt={`${restaurant.name} photo ${i + 1}`}
+                                      className="h-16 w-16 object-cover rounded"
+                                    />
+                                  ))}
+                                </div>
+                              )}
                             </a>
                           ))}
                         </div>
