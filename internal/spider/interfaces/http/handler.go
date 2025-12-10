@@ -85,11 +85,11 @@ func (h *SpiderHandler) Scrape(c *gin.Context) {
 			}
 		}
 		c.JSON(http.StatusOK, CachedResultsResponse{
-			GoogleID:   req.GoogleID,
-			Results:    results,
-			TotalFound: len(results),
-			FromCache:  true,
-			CachedAt:   cached.CachedAt.Format(time.RFC3339),
+			GoogleID:    req.GoogleID,
+			Restaurants: results,
+			TotalFound:  len(results),
+			FromCache:   true,
+			CachedAt:    cached.CachedAt.Format(time.RFC3339),
 		})
 		return
 	}
@@ -182,11 +182,11 @@ func (h *SpiderHandler) GetJobStatus(c *gin.Context) {
 
 // CachedResultsResponse is the response for cached results
 type CachedResultsResponse struct {
-	GoogleID   string                 `json:"google_id"`
-	Results    []TabelogRestaurantDTO `json:"results"`
-	TotalFound int                    `json:"total_found"`
-	FromCache  bool                   `json:"from_cache"`
-	CachedAt   string                 `json:"cached_at"`
+	GoogleID    string                 `json:"google_id"`
+	Restaurants []TabelogRestaurantDTO `json:"restaurants"`
+	TotalFound  int                    `json:"total_found"`
+	FromCache   bool                   `json:"from_cache"`
+	CachedAt    string                 `json:"cached_at"`
 }
 
 // StreamJobStatus handles GET /api/v1/spider/jobs/:job_id/stream
