@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/application/usecases"
+	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -251,9 +252,14 @@ func (h *SpiderHandler) StreamJobStatus(c *gin.Context) {
 				}
 
 				// Cache results when completed
-				if job.Status() == "completed" {
+				if job.Status() == models.JobStatusCompleted {
 					if err := h.resultCache.Set(c.Request.Context(), job.GoogleID(), job.Results(), 24*time.Hour); err != nil {
 						h.logger.Error("Failed to cache results", zap.Error(err))
+					} else {
+						h.logger.Info("Successfully cached results",
+							zap.String("google_id", job.GoogleID()),
+							zap.Int("results_count", len(job.Results())),
+						)
 					}
 				}
 			}
@@ -264,7 +270,7 @@ func (h *SpiderHandler) StreamJobStatus(c *gin.Context) {
 			c.Writer.Flush()
 
 			// Close stream if job is done
-			if job.Status() == "completed" || job.Status() == "failed" {
+			if job.Status() == models.JobStatusCompleted || job.Status() == models.JobStatusFailed {
 				h.logger.Info("Job finished, closing SSE stream",
 					zap.String("job_id", jobIDStr),
 					zap.String("status", string(job.Status())),
