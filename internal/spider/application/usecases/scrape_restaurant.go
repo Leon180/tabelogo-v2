@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Leon180/tabelogo-v2/internal/spider/application/services"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
-	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/scraper"
 	"go.uber.org/zap"
 )
 
@@ -25,21 +25,21 @@ type ScrapeRestaurantResponse struct {
 
 // ScrapeRestaurantUseCase handles restaurant scraping
 type ScrapeRestaurantUseCase struct {
-	jobRepo repositories.JobRepository
-	scraper *scraper.Scraper
-	logger  *zap.Logger
+	jobRepo      repositories.JobRepository
+	jobProcessor *services.JobProcessor
+	logger       *zap.Logger
 }
 
 // NewScrapeRestaurantUseCase creates a new use case
 func NewScrapeRestaurantUseCase(
 	jobRepo repositories.JobRepository,
-	scraper *scraper.Scraper,
+	jobProcessor *services.JobProcessor,
 	logger *zap.Logger,
 ) *ScrapeRestaurantUseCase {
 	return &ScrapeRestaurantUseCase{
-		jobRepo: jobRepo,
-		scraper: scraper,
-		logger:  logger.With(zap.String("usecase", "scrape_restaurant")),
+		jobRepo:      jobRepo,
+		jobProcessor: jobProcessor,
+		logger:       logger.With(zap.String("usecase", "scrape_restaurant")),
 	}
 }
 
@@ -59,46 +59,21 @@ func (uc *ScrapeRestaurantUseCase) Execute(ctx context.Context, req ScrapeRestau
 		return nil, fmt.Errorf("failed to save job: %w", err)
 	}
 
-	// Start job (in real implementation, this would be queued)
-	go uc.processJob(context.Background(), job)
+	// Submit to job processor (worker pool)
+	if err := uc.jobProcessor.SubmitJob(ctx, job.ID()); err != nil {
+		uc.logger.Error("Failed to submit job to processor",
+			zap.String("job_id", job.ID().String()),
+			zap.Error(err),
+		)
+		return nil, fmt.Errorf("failed to submit job: %w", err)
+	}
+
+	uc.logger.Info("Job submitted to worker pool",
+		zap.String("job_id", job.ID().String()),
+	)
 
 	return &ScrapeRestaurantResponse{
 		JobID:  job.ID().String(),
 		Status: string(job.Status()),
 	}, nil
-}
-
-// processJob processes a scraping job
-func (uc *ScrapeRestaurantUseCase) processJob(ctx context.Context, job *models.ScrapingJob) {
-	job.Start()
-	if err := uc.jobRepo.Update(ctx, job); err != nil {
-		uc.logger.Error("Failed to update job status",
-			zap.String("job_id", job.ID().String()),
-			zap.Error(err),
-		)
-	}
-
-	// Scrape
-	restaurants, err := uc.scraper.ScrapeRestaurants(job.Area(), job.PlaceName())
-	if err != nil {
-		job.Fail(err)
-		uc.logger.Error("Scraping failed",
-			zap.String("job_id", job.ID().String()),
-			zap.Error(err),
-		)
-	} else {
-		job.Complete(restaurants)
-		uc.logger.Info("Scraping completed",
-			zap.String("job_id", job.ID().String()),
-			zap.Int("results", len(restaurants)),
-		)
-	}
-
-	// Update job
-	if err := uc.jobRepo.Update(ctx, job); err != nil {
-		uc.logger.Error("Failed to update job",
-			zap.String("job_id", job.ID().String()),
-			zap.Error(err),
-		)
-	}
 }
