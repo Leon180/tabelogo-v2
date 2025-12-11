@@ -16,6 +16,7 @@ import (
 var Module = fx.Module("spider.http",
 	fx.Provide(
 		NewSpiderHandler,
+		NewSSEHandler,
 		NewHTTPServer,
 	),
 	fx.Invoke(RegisterRoutes),
@@ -56,6 +57,7 @@ func RegisterRoutes(
 	lc fx.Lifecycle,
 	router *gin.Engine,
 	handler *SpiderHandler,
+	sseHandler *SSEHandler,
 	cfg *config.Config,
 	logger *zap.Logger,
 ) {
@@ -86,7 +88,7 @@ func RegisterRoutes(
 
 		api.POST("/scrape", handler.Scrape)
 		api.GET("/jobs/:job_id", handler.GetJobStatus)
-		api.GET("/jobs/:job_id/stream", handler.StreamJobStatus) // SSE endpoint
+		api.GET("/jobs/:job_id/stream", sseHandler.StreamJobStatus) // SSE endpoint
 	}
 
 	// Lifecycle hooks

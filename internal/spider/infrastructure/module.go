@@ -19,7 +19,7 @@ var Module = fx.Module("spider.infrastructure",
 		NewRedis,
 		// Repositories
 		fx.Annotate(
-			persistence.NewInMemoryJobRepository,
+			persistence.NewRedisJobStore,
 			fx.As(new(repositories.JobRepository)),
 		),
 		fx.Annotate(
