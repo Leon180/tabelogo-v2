@@ -121,7 +121,13 @@ func (h *SSEHandler) sendJobUpdate(c *gin.Context, job *models.ScrapingJob) {
 	}
 
 	if job.Status() == models.JobStatusCompleted {
-		data["results_count"] = len(job.Results())
+		// Convert results to DTOs for JSON serialization
+		results := job.Results()
+		resultDTOs := make([]models.TabelogRestaurantDTO, len(results))
+		for i, r := range results {
+			resultDTOs[i] = r.ToDTO()
+		}
+		data["results"] = resultDTOs
 	}
 
 	if job.Status() == models.JobStatusFailed {
