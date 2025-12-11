@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -154,4 +155,88 @@ func (j *ScrapingJob) Duration() time.Duration {
 		return time.Since(*j.startedAt)
 	}
 	return j.completedAt.Sub(*j.startedAt)
+}
+
+// MarshalJSON implements json.Marshaler for JSON serialization
+func (j *ScrapingJob) MarshalJSON() ([]byte, error) {
+	// Convert domain model to serializable DTO
+	type jobDTO struct {
+		ID          string                 `json:"id"`
+		GoogleID    string                 `json:"google_id"`
+		Area        string                 `json:"area"`
+		PlaceName   string                 `json:"place_name"`
+		Status      JobStatus              `json:"status"`
+		Results     []TabelogRestaurantDTO `json:"results"`
+		ErrorMsg    string                 `json:"error_msg,omitempty"`
+		CreatedAt   time.Time              `json:"created_at"`
+		StartedAt   *time.Time             `json:"started_at,omitempty"`
+		CompletedAt *time.Time             `json:"completed_at,omitempty"`
+	}
+
+	// Convert results to DTOs
+	resultDTOs := make([]TabelogRestaurantDTO, len(j.results))
+	for i, r := range j.results {
+		resultDTOs[i] = r.ToDTO()
+	}
+
+	dto := jobDTO{
+		ID:          j.id.String(),
+		GoogleID:    j.googleID,
+		Area:        j.area,
+		PlaceName:   j.placeName,
+		Status:      j.status,
+		Results:     resultDTOs,
+		ErrorMsg:    j.errorMsg,
+		CreatedAt:   j.createdAt,
+		StartedAt:   j.startedAt,
+		CompletedAt: j.completedAt,
+	}
+
+	return json.Marshal(dto)
+}
+
+// UnmarshalJSON implements json.Unmarshaler for JSON deserialization
+func (j *ScrapingJob) UnmarshalJSON(data []byte) error {
+	type jobDTO struct {
+		ID          string                 `json:"id"`
+		GoogleID    string                 `json:"google_id"`
+		Area        string                 `json:"area"`
+		PlaceName   string                 `json:"place_name"`
+		Status      JobStatus              `json:"status"`
+		Results     []TabelogRestaurantDTO `json:"results"`
+		ErrorMsg    string                 `json:"error_msg,omitempty"`
+		CreatedAt   time.Time              `json:"created_at"`
+		StartedAt   *time.Time             `json:"started_at,omitempty"`
+		CompletedAt *time.Time             `json:"completed_at,omitempty"`
+	}
+
+	var dto jobDTO
+	if err := json.Unmarshal(data, &dto); err != nil {
+		return err
+	}
+
+	// Parse job ID
+	jobID, err := ParseJobID(dto.ID)
+	if err != nil {
+		return err
+	}
+
+	// Convert DTOs back to domain models
+	results := make([]TabelogRestaurant, len(dto.Results))
+	for i, dto := range dto.Results {
+		results[i] = *dto.ToDomain()
+	}
+
+	j.id = jobID
+	j.googleID = dto.GoogleID
+	j.area = dto.Area
+	j.placeName = dto.PlaceName
+	j.status = dto.Status
+	j.results = results
+	j.errorMsg = dto.ErrorMsg
+	j.createdAt = dto.CreatedAt
+	j.startedAt = dto.StartedAt
+	j.completedAt = dto.CompletedAt
+
+	return nil
 }
