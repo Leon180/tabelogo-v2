@@ -36,7 +36,9 @@ func StartJobProcessor(lc fx.Lifecycle, processor *services.JobProcessor, logger
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting job processor")
-			processor.Start(ctx)
+			// Use background context for long-running workers
+			// The hook ctx is only for startup timeout, not for worker lifetime
+			processor.Start(context.Background())
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
