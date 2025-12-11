@@ -10,7 +10,7 @@
 
 ### 2.1 功能服務實現狀態
 
-**最後更新**: 2025-12-06
+**最後更新**: 2025-12-11
 
 | 服務 | 狀態 | 完成度 | 主要功能 |
 |------|------|--------|------------|
@@ -19,11 +19,11 @@
 | **Map Service** | ✅ 已實現 | 100% | HTTP API, gRPC API, Swagger UI, Prometheus, Google Maps 整合 |
 | **Phase 2 Integration** | ✅ 已完成 | 100% | Restaurant-Map 智能快取整合、80% 成本降低 |
 | **Booking Service** | ⏳ 規劃中 | 0% | 餐廳預訂功能（整合 OpenTable API）|
-| **Spider Service** | ⏳ 規劃中 | 0% | 爬蟲微服務（爬取 Tabelog 等餐廳資訊）|
+| **Spider Service** | 🚧 開發中 | 40% | HTTP API, gRPC API, Tabelog 爬蟲, Redis 快取, DTO 模式 |
 | **Mail Service** | ⏳ 規劃中 | 0% | 郵件通知服務 |
 | **API Gateway** | ⏳ 規劃中 | 0% | 統一入口、路由、認證 |
 
-**整體完成度**: **43%** (3/7 服務已實現)
+**整體完成度**: **49%** (3.4/7 服務已實現)
 
 ### 2.2 已實現服務詳情
 
@@ -60,6 +60,19 @@
 - ✅ Docker 容器化 (HTTP: 8081, gRPC: 19083)
 - ✅ 健康檢查與日誌
 - ✅ **Phase 2**: Restaurant Service 整合（已完成）
+
+#### Spider Service 🚧 **（Phase 1 進行中）**
+- ✅ HTTP RESTful API (3 endpoints: scrape, job status, stream)
+- ✅ gRPC API (2 RPC methods: SearchSimilarRestaurants, GetRestaurantPhotos)
+- ✅ Tabelog 爬蟲實現 (使用 colly)
+- ✅ Redis 快取 (DB 2) - DTO 模式實現
+- ✅ Domain Model 封裝 (私有字段 + getter 方法)
+- ✅ DTO 層處理 JSON 序列化
+- ✅ Docker 容器化 (HTTP: 18084, gRPC: 19084)
+- ⏳ 非同步任務處理 (Job Queue + SSE)
+- ⏳ 錯誤處理與重試機制 (Circuit Breaker)
+- ⏳ Rate Limiting (防止被封鎖)
+- ⏳ Prometheus Metrics 監控
 
 ### 2.3 Phase 2: Map-Restaurant 服務整合 ✅ **（已完成）**
 
