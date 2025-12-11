@@ -139,11 +139,14 @@ export async function searchTabelog(
             `http://localhost:18084/api/v1/spider/jobs/${jobId}/stream`
         );
 
-        // Handle status updates
-        eventSource.addEventListener('status', (event) => {
-            const status: JobStatusResponse = JSON.parse(event.data);
+        let lastStatus: JobStatusResponse | null = null;
 
-            console.log('📡 SSE status update:', status.status);
+        // Handle status updates
+        eventSource.addEventListener('update', (event) => {
+            const status: JobStatusResponse = JSON.parse(event.data);
+            lastStatus = status;
+
+            console.log('📡 SSE update:', status.status);
 
             // Update progress
             if (onProgress) {
@@ -166,20 +169,58 @@ export async function searchTabelog(
             }
         });
 
-        // Handle errors
-        eventSource.addEventListener('error', (event: any) => {
-            const errorData = event.data ? JSON.parse(event.data) : null;
+        // Handle completion event
+        eventSource.addEventListener('done', (event) => {
+            const data = JSON.parse(event.data);
+            console.log('✅ Job done:', data.message);
             eventSource.close();
-            console.error('❌ SSE error:', errorData);
-            reject(new SpiderServiceError(errorData?.error || 'SSE connection failed'));
+
+            // If we have status from updates, use it
+            if (lastStatus && lastStatus.status === 'COMPLETED') {
+                resolve({
+                    google_id: lastStatus.google_id,
+                    restaurants: lastStatus.results || [],
+                    total_found: lastStatus.results?.length || 0,
+                });
+            }
+        });
+
+        // Handle error events
+        eventSource.addEventListener('error', (event: MessageEvent) => {
+            try {
+                const errorData = JSON.parse(event.data);
+                eventSource.close();
+                console.error('❌ SSE error event:', errorData);
+                reject(new SpiderServiceError(errorData?.error || 'SSE error'));
+            } catch {
+                // Ignore parse errors for error events
+            }
         });
 
         // Handle connection errors
-        eventSource.onerror = () => {
+        eventSource.onerror = (error) => {
             eventSource.close();
-            console.error('❌ SSE connection error');
-            reject(new SpiderServiceError('Failed to connect to SSE stream'));
+            console.error('❌ SSE connection error:', error);
+
+            // If we already have completed status, resolve instead of reject
+            if (lastStatus?.status === 'COMPLETED') {
+                resolve({
+                    google_id: lastStatus.google_id,
+                    restaurants: lastStatus.results || [],
+                    total_found: lastStatus.results?.length || 0,
+                });
+            } else {
+                reject(new SpiderServiceError('SSE connection failed'));
+            }
         };
+
+        // Timeout after 2 minutes
+        setTimeout(() => {
+            if (eventSource.readyState !== EventSource.CLOSED) {
+                eventSource.close();
+                reject(new SpiderServiceError('SSE timeout after 2 minutes'));
+            }
+        }, 120000);
     });
 }
 
