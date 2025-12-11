@@ -140,7 +140,7 @@ services:
       KAFKA_BROKERS: kafka:9092
     ports:
       - "8080:8080" # HTTP
-      - "9090:9090" # gRPC
+      - "9094:9090" # gRPC (external 9094, internal 9090)
     depends_on:
       postgres-auth:
         condition: service_healthy
@@ -311,7 +311,7 @@ services:
     image: prom/prometheus:latest
     container_name: tabelogo-prometheus
     ports:
-      - "9091:9090" # Changed to 9091 to avoid port conflict
+      - "9095:9090" # Changed to 9095 to avoid port conflict with Antigravity (uses 9091-9093)
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus

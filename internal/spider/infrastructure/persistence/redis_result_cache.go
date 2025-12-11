@@ -60,9 +60,15 @@ func (r *RedisResultCache) Get(ctx context.Context, placeID string) (*models.Cac
 func (r *RedisResultCache) Set(ctx context.Context, placeID string, results []models.TabelogRestaurant, ttl time.Duration) error {
 	key := fmt.Sprintf("tabelog:results:%s", placeID)
 
+	// Convert domain models to DTOs for JSON serialization
+	dtos := make([]models.TabelogRestaurantDTO, len(results))
+	for i, restaurant := range results {
+		dtos[i] = restaurant.ToDTO()
+	}
+
 	cached := models.CachedResult{
 		PlaceID:   placeID,
-		Results:   results,
+		Results:   dtos,
 		CachedAt:  time.Now(),
 		ExpiresAt: time.Now().Add(ttl),
 	}

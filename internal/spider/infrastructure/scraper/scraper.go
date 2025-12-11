@@ -166,6 +166,7 @@ func (s *Scraper) scrapeRestaurantDetails(link string) (*models.TabelogRestauran
 
 	err := c.Visit(link)
 	if err != nil {
+		s.logger.Error("Failed to visit URL", zap.String("url", link), zap.Error(err))
 		return nil, err
 	}
 

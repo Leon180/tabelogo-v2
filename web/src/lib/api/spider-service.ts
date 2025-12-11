@@ -21,6 +21,7 @@ export interface TabelogRestaurant {
     bookmarks: number;
     phone: string;
     types: string[];
+    photos: string[];
 }
 
 export interface SearchTabelogRequest {

@@ -3,11 +3,12 @@ package models
 import "time"
 
 // CachedResult represents cached scrape results
+// Uses DTO for JSON serialization to Redis
 type CachedResult struct {
-	PlaceID   string
-	Results   []TabelogRestaurant
-	CachedAt  time.Time
-	ExpiresAt time.Time
+	PlaceID   string                 `json:"place_id"`
+	Results   []TabelogRestaurantDTO `json:"results"`
+	CachedAt  time.Time              `json:"cached_at"`
+	ExpiresAt time.Time              `json:"expires_at"`
 }
 
 // IsExpired checks if the cached result has expired
