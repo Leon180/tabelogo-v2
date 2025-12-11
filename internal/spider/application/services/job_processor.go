@@ -190,8 +190,21 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 	}
 
 	// Cache results
+	logger.Info("Attempting to cache results",
+		zap.String("google_id", job.GoogleID()),
+		zap.Int("results_count", len(resultPtrs)),
+	)
+
 	if err := p.resultCache.Set(ctx, job.GoogleID(), resultPtrs, 24*time.Hour); err != nil {
-		logger.Warn("Failed to cache results", zap.Error(err))
+		logger.Error("Failed to cache results",
+			zap.Error(err),
+			zap.String("google_id", job.GoogleID()),
+		)
+	} else {
+		logger.Info("Successfully cached results",
+			zap.String("google_id", job.GoogleID()),
+			zap.Int("results_count", len(resultPtrs)),
+		)
 	}
 
 	logger.Info("Job completed successfully")
