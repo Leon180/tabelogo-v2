@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/gocolly/colly/v2"
 	"github.com/gocolly/colly/v2/extensions"
 	"github.com/sony/gobreaker"
@@ -19,87 +20,102 @@ type Scraper struct {
 	config         *models.ScraperConfig
 	logger         *zap.Logger
 	circuitBreaker *gobreaker.CircuitBreaker
+	metrics        *metrics.SpiderMetrics
 }
 
 // NewScraper creates a new scraper
-func NewScraper(config *models.ScraperConfig, logger *zap.Logger) *Scraper {
+func NewScraper(config *models.ScraperConfig, metrics *metrics.SpiderMetrics, logger *zap.Logger) *Scraper {
 	scraperLogger := logger.With(zap.String("component", "scraper"))
 	return &Scraper{
 		config:         config,
 		logger:         scraperLogger,
-		circuitBreaker: NewCircuitBreaker(scraperLogger, DefaultCircuitBreakerConfig()),
+		circuitBreaker: NewCircuitBreaker(scraperLogger, metrics, DefaultCircuitBreakerConfig()),
+		metrics:        metrics,
 	}
 }
 
 // ScrapeRestaurants scrapes Tabelog for restaurants
 func (s *Scraper) ScrapeRestaurants(area, placeName string) ([]models.TabelogRestaurant, error) {
+	// Track scrape duration
+	startTime := time.Now()
+	defer func() {
+		s.metrics.RecordScrapeDuration("search", time.Since(startTime).Seconds())
+	}()
+
 	s.logger.Info("Starting restaurant scrape",
 		zap.String("area", area),
 		zap.String("place_name", placeName),
 	)
 
-	// Step 1: Get restaurant links
+	// Step 1: Scrape links
 	links, err := s.scrapeLinks(area, placeName)
 	if err != nil {
+		s.metrics.RecordScrapeError("search_failed")
 		return nil, fmt.Errorf("failed to scrape links: %w", err)
 	}
 
 	if len(links) == 0 {
-		return nil, fmt.Errorf("no restaurants found")
+		s.logger.Warn("No restaurant links found",
+			zap.String("area", area),
+			zap.String("place_name", placeName),
+		)
+		s.metrics.RecordScrapeError("no_results")
+		return []models.TabelogRestaurant{}, nil
 	}
 
 	s.logger.Info("Found restaurant links",
 		zap.Int("count", len(links)),
 	)
 
-	// Limit links
-	if len(links) > s.config.MaxLinksToCollect() {
-		links = links[:s.config.MaxLinksToCollect()]
-	}
-
-	// Step 2: Scrape details concurrently
-	restaurants := make([]models.TabelogRestaurant, len(links))
+	// Step 2: Scrape details for each link (with concurrency)
 	var wg sync.WaitGroup
-	var mu sync.Mutex
-	errors := []error{}
+	resultsChan := make(chan models.TabelogRestaurant, len(links))
+	errorsChan := make(chan error, len(links))
 
-	for i, link := range links {
+	for _, link := range links {
 		wg.Add(1)
-		go func(index int, url string) {
+		go func(url string) {
 			defer wg.Done()
 
+			// Track detail scrape duration
+			detailStart := time.Now()
 			restaurant, err := s.scrapeRestaurantDetails(url)
+			s.metrics.RecordScrapeDuration("details", time.Since(detailStart).Seconds())
+
 			if err != nil {
-				mu.Lock()
-				errors = append(errors, err)
-				mu.Unlock()
-				s.logger.Error("Failed to scrape restaurant",
+				s.logger.Warn("Failed to scrape restaurant details",
 					zap.String("url", url),
 					zap.Error(err),
 				)
+				s.metrics.RecordScrapeError("details_failed")
+				errorsChan <- err
 				return
 			}
 
-			mu.Lock()
-			restaurants[index] = *restaurant
-			mu.Unlock()
-		}(i, link)
-
-		// Rate limiting
-		time.Sleep(s.config.DelayBetweenRequests())
+			if restaurant != nil {
+				resultsChan <- *restaurant
+			}
+		}(link)
 	}
 
 	wg.Wait()
+	close(resultsChan)
+	close(errorsChan)
 
-	// Filter out empty results
-	validRestaurants := []models.TabelogRestaurant{}
-	for _, r := range restaurants {
-		if r.Name() != "" {
-			validRestaurants = append(validRestaurants, r)
-		}
+	// Collect results
+	var validRestaurants []models.TabelogRestaurant
+	for restaurant := range resultsChan {
+		validRestaurants = append(validRestaurants, restaurant)
+	}
+
+	// Collect errors
+	var errors []error
+	for err := range errorsChan {
+		errors = append(errors, err)
 	}
 
 	if len(validRestaurants) == 0 && len(errors) > 0 {
+		s.metrics.RecordScrapeError("all_failed")
 		return nil, fmt.Errorf("all scraping attempts failed: %v", errors[0])
 	}
 

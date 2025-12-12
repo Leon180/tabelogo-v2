@@ -3,6 +3,7 @@ package scraper
 import (
 	"time"
 
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/sony/gobreaker"
 	"go.uber.org/zap"
 )
@@ -24,7 +25,7 @@ func DefaultCircuitBreakerConfig() CircuitBreakerConfig {
 }
 
 // NewCircuitBreaker creates a new circuit breaker for the scraper
-func NewCircuitBreaker(logger *zap.Logger, config CircuitBreakerConfig) *gobreaker.CircuitBreaker {
+func NewCircuitBreaker(logger *zap.Logger, metrics *metrics.SpiderMetrics, config CircuitBreakerConfig) *gobreaker.CircuitBreaker {
 	settings := gobreaker.Settings{
 		Name:        "tabelog-scraper",
 		MaxRequests: config.MaxRequests,
@@ -41,10 +42,28 @@ func NewCircuitBreaker(logger *zap.Logger, config CircuitBreakerConfig) *gobreak
 				zap.String("from", from.String()),
 				zap.String("to", to.String()),
 			)
+
+			// Record state change in metrics
+			var stateValue float64
+			switch to {
+			case gobreaker.StateClosed:
+				stateValue = 0
+			case gobreaker.StateOpen:
+				stateValue = 1
+				metrics.RecordCircuitBreakerFailure(name)
+			case gobreaker.StateHalfOpen:
+				stateValue = 2
+			}
+			metrics.SetCircuitBreakerState(name, stateValue)
 		},
 	}
 
-	return gobreaker.NewCircuitBreaker(settings)
+	cb := gobreaker.NewCircuitBreaker(settings)
+
+	// Initialize state metric
+	metrics.SetCircuitBreakerState("tabelog-scraper", 0) // Start as closed
+
+	return cb
 }
 
 // IsCircuitBreakerError checks if error is from circuit breaker
