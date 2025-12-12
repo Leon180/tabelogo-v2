@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/persistence"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/scraper"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
@@ -28,6 +29,8 @@ var Module = fx.Module("spider.infrastructure",
 		),
 		// Scraper
 		scraper.NewScraper,
+		// Metrics
+		metrics.NewSpiderMetrics,
 	),
 )
 

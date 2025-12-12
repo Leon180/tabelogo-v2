@@ -9,15 +9,17 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/spider/application/usecases"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
-// SpiderHandler handles HTTP requests for spider service
+// SpiderHandler handles HTTP requests for spider operations
 type SpiderHandler struct {
 	scrapeUseCase       *usecases.ScrapeRestaurantUseCase
 	getJobStatusUseCase *usecases.GetJobStatusUseCase
 	resultCache         repositories.ResultCacheRepository
+	metrics             *metrics.SpiderMetrics
 	logger              *zap.Logger
 }
 
@@ -26,12 +28,14 @@ func NewSpiderHandler(
 	scrapeUseCase *usecases.ScrapeRestaurantUseCase,
 	getJobStatusUseCase *usecases.GetJobStatusUseCase,
 	resultCache repositories.ResultCacheRepository,
+	metrics *metrics.SpiderMetrics,
 	logger *zap.Logger,
 ) *SpiderHandler {
 	return &SpiderHandler{
 		scrapeUseCase:       scrapeUseCase,
 		getJobStatusUseCase: getJobStatusUseCase,
 		resultCache:         resultCache,
+		metrics:             metrics,
 		logger:              logger.With(zap.String("component", "http_handler")),
 	}
 }
@@ -66,6 +70,10 @@ func (h *SpiderHandler) Scrape(c *gin.Context) {
 	// Check cache first
 	cached, err := h.resultCache.Get(c.Request.Context(), req.GoogleID)
 	if err == nil && cached != nil {
+		// Record cache hit
+		h.metrics.RecordCacheHit()
+		h.metrics.RecordScrapeRequest("cached")
+
 		h.logger.Info("Returning cached results",
 			zap.String("google_id", req.GoogleID),
 			zap.Int("results_count", len(cached.Results)),
@@ -96,6 +104,9 @@ func (h *SpiderHandler) Scrape(c *gin.Context) {
 		return
 	}
 
+	// Record cache miss
+	h.metrics.RecordCacheMiss()
+
 	// Start scraping job
 	resp, err := h.scrapeUseCase.Execute(c.Request.Context(), usecases.ScrapeRestaurantRequest{
 		GoogleID:  req.GoogleID,
@@ -103,11 +114,13 @@ func (h *SpiderHandler) Scrape(c *gin.Context) {
 		PlaceName: req.PlaceName,
 	})
 	if err != nil {
+		h.metrics.RecordScrapeRequest("failed")
 		h.logger.Error("Scrape failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
+	h.metrics.RecordScrapeRequest("success")
 	c.JSON(http.StatusAccepted, ScrapeResponse{
 		JobID:  resp.JobID,
 		Status: resp.Status,

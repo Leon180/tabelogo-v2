@@ -66,26 +66,38 @@ func RegisterRoutes(
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "spider-service",
-		})
+		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 	})
+
+	// Prometheus metrics endpoint
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// API routes
 	api := router.Group("/api/v1/spider")
 	{
-		// Handle OPTIONS for CORS preflight - must match each specific route
+		// CORS preflight
 		api.OPTIONS("/scrape", func(c *gin.Context) {
-			c.Status(http.StatusNoContent)
-		})
-		api.OPTIONS("/jobs/:job_id", func(c *gin.Context) {
-			c.Status(http.StatusNoContent)
-		})
-		api.OPTIONS("/jobs/:job_id/stream", func(c *gin.Context) {
+			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Methods", "POST, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Content-Type")
 			c.Status(http.StatusNoContent)
 		})
 
+		api.OPTIONS("/jobs/:job_id", func(c *gin.Context) {
+			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Content-Type")
+			c.Status(http.StatusNoContent)
+		})
+
+		api.OPTIONS("/jobs/:job_id/stream", func(c *gin.Context) {
+			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Cache-Control")
+			c.Status(http.StatusNoContent)
+		})
+
+		// Actual endpoints
 		api.POST("/scrape", handler.Scrape)
 		api.GET("/jobs/:job_id", handler.GetJobStatus)
 		api.GET("/jobs/:job_id/stream", sseHandler.StreamJobStatus) // SSE endpoint
