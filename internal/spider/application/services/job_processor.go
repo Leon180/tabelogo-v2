@@ -148,7 +148,7 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 
 	// Scrape restaurants
 	startTime := time.Now()
-	results, err := p.scraper.ScrapeRestaurants(job.PlaceName(), job.Area())
+	results, err := p.scraper.ScrapeRestaurants(job.Area(), job.PlaceName())
 	duration := time.Since(startTime)
 
 	if err != nil {
