@@ -8,6 +8,7 @@ import (
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/scraper"
 	"go.uber.org/zap"
 )
@@ -17,6 +18,7 @@ type JobProcessor struct {
 	jobRepo     repositories.JobRepository
 	resultCache repositories.ResultCacheRepository
 	scraper     *scraper.Scraper
+	metrics     *metrics.SpiderMetrics
 	logger      *zap.Logger
 	workerCount int
 	jobQueue    chan models.JobID
@@ -30,6 +32,7 @@ func NewJobProcessor(
 	jobRepo repositories.JobRepository,
 	resultCache repositories.ResultCacheRepository,
 	scraper *scraper.Scraper,
+	metrics *metrics.SpiderMetrics,
 	logger *zap.Logger,
 	workerCount int,
 ) *JobProcessor {
@@ -37,6 +40,7 @@ func NewJobProcessor(
 		jobRepo:     jobRepo,
 		resultCache: resultCache,
 		scraper:     scraper,
+		metrics:     metrics,
 		logger:      logger.With(zap.String("component", "job_processor")),
 		workerCount: workerCount,
 		jobQueue:    make(chan models.JobID, 100), // Buffer of 100 jobs
@@ -49,13 +53,16 @@ func NewJobProcessor(
 func (p *JobProcessor) Start(ctx context.Context) {
 	p.logger.Info("Starting job processor", zap.Int("workers", p.workerCount))
 
+	// Set worker pool size metric
+	p.metrics.SetWorkerPoolSize(p.workerCount)
+
 	// Start workers
+	p.wg.Add(p.workerCount)
 	for i := 0; i < p.workerCount; i++ {
-		p.wg.Add(1)
 		go p.worker(ctx, i)
 	}
 
-	// Start job fetcher (polls for pending jobs)
+	// Start job fetcher
 	p.wg.Add(1)
 	go p.jobFetcher(ctx)
 
@@ -125,6 +132,9 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 	logger = logger.With(zap.String("job_id", jobID.String()))
 	logger.Info("Processing job")
 
+	// Track job start time
+	jobStartTime := time.Now()
+
 	// Get job from repository
 	job, err := p.jobRepo.FindByID(ctx, jobID)
 	if err != nil {
@@ -134,6 +144,7 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 
 	// Mark job as running
 	job.Start()
+	p.metrics.RecordJob("running")
 	if err := p.jobRepo.Update(ctx, job); err != nil {
 		logger.Error("Failed to update job status", zap.Error(err))
 	}
@@ -143,6 +154,8 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 		logger.Error("Rate limiter error", zap.Error(err))
 		job.Fail(fmt.Errorf("rate limiter error: %w", err))
 		p.jobRepo.Update(ctx, job)
+		p.metrics.RecordJob("failed")
+		p.metrics.RecordJobDuration("failed", time.Since(jobStartTime).Seconds())
 		return
 	}
 
@@ -165,6 +178,8 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 
 		job.Fail(err)
 		p.jobRepo.Update(ctx, job)
+		p.metrics.RecordJob("failed")
+		p.metrics.RecordJobDuration("failed", time.Since(jobStartTime).Seconds())
 		return
 	}
 
@@ -188,6 +203,11 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 		logger.Error("Failed to update job", zap.Error(err))
 		return
 	}
+
+	// Record metrics
+	p.metrics.RecordJob("completed")
+	p.metrics.RecordJobDuration("completed", time.Since(jobStartTime).Seconds())
+	p.metrics.RecordRestaurantsScraped(len(resultPtrs))
 
 	// Cache results
 	logger.Info("Attempting to cache results",

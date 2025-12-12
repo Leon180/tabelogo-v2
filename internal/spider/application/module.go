@@ -6,6 +6,7 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/spider/application/services"
 	"github.com/Leon180/tabelogo-v2/internal/spider/application/usecases"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/scraper"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -26,9 +27,10 @@ func NewJobProcessor(
 	jobRepo repositories.JobRepository,
 	resultCache repositories.ResultCacheRepository,
 	scraper *scraper.Scraper,
+	metrics *metrics.SpiderMetrics,
 	logger *zap.Logger,
 ) *services.JobProcessor {
-	return services.NewJobProcessor(jobRepo, resultCache, scraper, logger, 20)
+	return services.NewJobProcessor(jobRepo, resultCache, scraper, metrics, logger, 20)
 }
 
 // StartJobProcessor starts the job processor with lifecycle management
