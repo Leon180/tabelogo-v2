@@ -10,20 +10,24 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
 	"github.com/gocolly/colly/v2"
 	"github.com/gocolly/colly/v2/extensions"
+	"github.com/sony/gobreaker"
 	"go.uber.org/zap"
 )
 
 // Scraper handles web scraping operations
 type Scraper struct {
-	config *models.ScraperConfig
-	logger *zap.Logger
+	config         *models.ScraperConfig
+	logger         *zap.Logger
+	circuitBreaker *gobreaker.CircuitBreaker
 }
 
 // NewScraper creates a new scraper
 func NewScraper(config *models.ScraperConfig, logger *zap.Logger) *Scraper {
+	scraperLogger := logger.With(zap.String("component", "scraper"))
 	return &Scraper{
-		config: config,
-		logger: logger.With(zap.String("component", "scraper")),
+		config:         config,
+		logger:         scraperLogger,
+		circuitBreaker: NewCircuitBreaker(scraperLogger, DefaultCircuitBreakerConfig()),
 	}
 }
 
@@ -107,31 +111,68 @@ func (s *Scraper) ScrapeRestaurants(area, placeName string) ([]models.TabelogRes
 	return validRestaurants, nil
 }
 
-// scrapeLinks scrapes restaurant links from search results
+// scrapeLinks scrapes restaurant links from Tabelog search
 func (s *Scraper) scrapeLinks(area, placeName string) ([]string, error) {
-	c := s.newCollector()
+	var links []string
+	var scrapeErr error
 
-	links := []string{}
-	c.OnHTML(".list-rst__rst-name-target", func(e *colly.HTMLElement) {
-		link := e.Attr("href")
-		if link != "" {
-			links = append(links, link)
-		}
-	})
+	// Execute with circuit breaker protection
+	_, err := s.circuitBreaker.Execute(func() (interface{}, error) {
+		// Build search URL
+		searchURL := s.buildSearchURL(area, placeName)
 
-	searchURL := s.buildSearchURL(area, placeName)
-	s.logger.Info("Visiting Tabelog search URL",
-		zap.String("url", searchURL),
-		zap.String("area", area),
-		zap.String("place_name", placeName),
-	)
-
-	err := c.Visit(searchURL)
-	if err != nil {
-		s.logger.Error("Failed to visit search URL",
+		s.logger.Info("Visiting Tabelog search URL",
 			zap.String("url", searchURL),
-			zap.Error(err),
+			zap.String("area", area),
+			zap.String("place_name", placeName),
 		)
+
+		// Create collector
+		c := s.newCollector()
+
+		// Collect restaurant links
+		c.OnHTML("a.list-rst__rst-name-target", func(e *colly.HTMLElement) {
+			link := e.Attr("href")
+			if link != "" {
+				// Ensure absolute URL
+				if !strings.HasPrefix(link, "http") {
+					link = "https://tabelog.com" + link
+				}
+				links = append(links, link)
+			}
+		})
+
+		// Handle errors
+		c.OnError(func(r *colly.Response, err error) {
+			s.logger.Error("Failed to visit search URL",
+				zap.String("url", searchURL),
+				zap.Error(err),
+			)
+			scrapeErr = err
+		})
+
+		// Visit the search page
+		if err := c.Visit(searchURL); err != nil {
+			return nil, err
+		}
+
+		c.Wait()
+
+		if scrapeErr != nil {
+			return nil, scrapeErr
+		}
+
+		return links, nil
+	})
+	if err != nil {
+		// Check if it's a circuit breaker error
+		if IsCircuitBreakerError(err) {
+			s.logger.Warn("Circuit breaker is open, rejecting request",
+				zap.String("area", area),
+				zap.String("place_name", placeName),
+			)
+			return nil, fmt.Errorf("service temporarily unavailable (circuit breaker open): %w", err)
+		}
 		return nil, err
 	}
 
