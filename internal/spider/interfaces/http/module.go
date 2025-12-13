@@ -69,9 +69,6 @@ func RegisterRoutes(
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 	})
 
-	// Prometheus metrics endpoint
-	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
 	// API routes
 	api := router.Group("/api/v1/spider")
 	{
