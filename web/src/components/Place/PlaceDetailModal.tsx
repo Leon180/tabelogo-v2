@@ -128,8 +128,6 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       console.log('Area:', place?.area);
 
       // 5. Call Spider Service to search Tabelog with SSE progress
-      setScrapingProgress('Starting Tabelog search...');
-
       const tabelogResponse = await searchTabelog({
         google_id: placeId,
         place_name: place?.displayName?.text || '',
