@@ -9,6 +9,7 @@ import { getPlacePhotoUrl, getPlaceholderImageUrl } from '@/lib/utils/getPlacePh
 import { updateRestaurant } from '@/lib/api/restaurant-service';
 import { getJapaneseName, quickSearch } from '@/lib/api/map-service';
 import { searchTabelog, type TabelogRestaurant } from '@/lib/api/spider-service';
+import { ScrapingStatusDisplay, type ScrapingStatus } from '@/components/Spider/ScrapingStatus';
 import type { Place } from '@/types/search';
 
 interface PlaceDetailModalProps {
@@ -39,7 +40,8 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   const [japaneseName, setJapaneseName] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [tabelogResults, setTabelogResults] = useState<TabelogRestaurant[]>([]);
-  const [scrapingProgress, setScrapingProgress] = useState<string>('');
+  const [scrapingStatus, setScrapingStatus] = useState<ScrapingStatus | null>(null);
+  const [scrapingMessage, setScrapingMessage] = useState<string>('');
 
   // Close modal on ESC key
   useEffect(() => {
@@ -93,6 +95,8 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
     try {
       setIsUpdatingJaName(true);
       setUpdateError(null);
+      setScrapingStatus('pending');
+      setScrapingMessage('Preparing to search Tabelog...');
 
       // 1. Get Japanese name and addressComponents from Map Service
       console.log('📞 Fetching Japanese name and addressComponents from Map Service');
@@ -134,13 +138,14 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
         max_results: 10
       }, (status) => {
         // Update progress based on job status
+        setScrapingStatus(status as ScrapingStatus);
         const statusMessages: Record<string, string> = {
-          'pending': 'Waiting to start...',
+          'pending': 'Queued for scraping...',
           'running': 'Scraping Tabelog...',
-          'completed': 'Complete!',
-          'failed': 'Failed'
+          'completed': 'Scraping complete!',
+          'failed': 'Scraping failed'
         };
-        setScrapingProgress(statusMessages[status] || status);
+        setScrapingMessage(statusMessages[status] || status);
       });
 
       console.log('✅ Spider Service response:', {
@@ -150,12 +155,21 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       });
 
       setTabelogResults(tabelogResponse.restaurants);
-      setScrapingProgress(''); // Clear progress
+      setScrapingStatus('completed');
+      setScrapingMessage(`Found ${tabelogResponse.total_found} restaurant${tabelogResponse.total_found === 1 ? '' : 's'}`);
       console.log(`✅ Found ${tabelogResponse.total_found} Tabelog restaurants`);
+
+      // Clear status after 3 seconds
+      setTimeout(() => {
+        setScrapingStatus(null);
+        setScrapingMessage('');
+      }, 3000);
     } catch (error) {
       console.error('Failed to search Tabelog:', error);
-      setUpdateError(error instanceof Error ? error.message : 'Failed to search Tabelog');
-      setScrapingProgress(''); // Clear progress on error
+      const errorMessage = error instanceof Error ? error.message : 'Failed to search Tabelog';
+      setUpdateError(errorMessage);
+      setScrapingStatus('failed');
+      setScrapingMessage(errorMessage);
     } finally {
       setIsUpdatingJaName(false);
     }
@@ -400,8 +414,21 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                       </div>
                     )}
 
-                    {/* Error Display */}
-                    {updateError && (
+                    {/* Scraping Status Display */}
+                    {scrapingStatus && (
+                      <div className="mt-3">
+                        <ScrapingStatusDisplay
+                          status={scrapingStatus}
+                          message={scrapingMessage}
+                          resultsCount={tabelogResults.length}
+                          error={updateError || undefined}
+                          onRetry={scrapingStatus === 'failed' ? handleTabelogClick : undefined}
+                        />
+                      </div>
+                    )}
+
+                    {/* Error Display (legacy, kept for non-scraping errors) */}
+                    {updateError && !scrapingStatus && (
                       <div className="mt-3 p-3 bg-red-900/30 border border-red-700/50 rounded-lg">
                         <p className="text-sm text-red-400">
                           ✗ {updateError}
