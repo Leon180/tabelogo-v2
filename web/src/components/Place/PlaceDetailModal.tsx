@@ -135,15 +135,17 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
         area: place?.area || '', // Use extracted area from addressComponents
         max_results: 10
       }, (status) => {
-        // Update progress based on job status
-        setScrapingStatus(status as ScrapingStatus);
+        // Normalize status to lowercase (backend sends UPPERCASE)
+        const normalizedStatus = status.toLowerCase() as ScrapingStatus;
+        setScrapingStatus(normalizedStatus);
+
         const statusMessages: Record<string, string> = {
           'pending': 'Queued for scraping...',
           'running': 'Scraping Tabelog...',
           'completed': 'Scraping complete!',
           'failed': 'Scraping failed'
         };
-        setScrapingMessage(statusMessages[status] || status);
+        setScrapingMessage(statusMessages[normalizedStatus] || status);
       });
 
       console.log('✅ Spider Service response:', {
