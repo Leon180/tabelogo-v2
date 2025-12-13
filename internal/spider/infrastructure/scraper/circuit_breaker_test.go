@@ -28,7 +28,7 @@ func TestCircuitBreaker(t *testing.T) {
 
 	t.Run("opens after consecutive failures", func(t *testing.T) {
 		// Reset circuit breaker
-		cb = NewCircuitBreaker(logger, config)
+		cb = NewCircuitBreaker(logger, m, config)
 
 		// Cause failures to open circuit
 		testErr := errors.New("test error")
@@ -55,7 +55,7 @@ func TestCircuitBreaker(t *testing.T) {
 			Interval:    1 * time.Second,
 			Timeout:     100 * time.Millisecond,
 		}
-		cb = NewCircuitBreaker(logger, shortConfig)
+		cb = NewCircuitBreaker(logger, m, shortConfig)
 
 		// Open the circuit
 		testErr := errors.New("test error")
