@@ -56,6 +56,15 @@ export const ScrapingStatusDisplay: React.FC<ScrapingStatusProps> = ({
                     borderColor: 'border-red-200',
                     textColor: 'text-red-700',
                 };
+            default:
+                return {
+                    icon: <Clock className="w-6 h-6 text-gray-500" />,
+                    title: 'Unknown Status',
+                    description: 'An unexpected status was encountered.',
+                    bgColor: 'bg-gray-50',
+                    borderColor: 'border-gray-200',
+                    textColor: 'text-gray-700',
+                };
         }
     };
 
