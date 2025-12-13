@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
+
 	"github.com/sony/gobreaker"
 	"go.uber.org/zap"
 )
@@ -12,7 +14,8 @@ import (
 func TestCircuitBreaker(t *testing.T) {
 	logger := zap.NewNop()
 	config := DefaultCircuitBreakerConfig()
-	cb := NewCircuitBreaker(logger, config)
+	m := metrics.NewSpiderMetrics()
+	cb := NewCircuitBreaker(logger, m, config)
 
 	t.Run("allows requests when closed", func(t *testing.T) {
 		_, err := cb.Execute(func() (interface{}, error) {
