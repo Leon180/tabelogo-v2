@@ -52,7 +52,7 @@ func (s *Scraper) ScrapeRestaurants(area, placeName string) ([]models.TabelogRes
 	links, err := s.scrapeLinks(area, placeName)
 	if err != nil {
 		s.metrics.RecordScrapeError("search_failed")
-		return nil, fmt.Errorf("failed to scrape links: %w", err)
+		return nil, fmt.Errorf("failed to scrape restaurant links for '%s' in area '%s': %w", placeName, area, err)
 	}
 
 	if len(links) == 0 {
@@ -84,8 +84,10 @@ func (s *Scraper) ScrapeRestaurants(area, placeName string) ([]models.TabelogRes
 			s.metrics.RecordScrapeDuration("details", time.Since(detailStart).Seconds())
 
 			if err != nil {
-				s.logger.Warn("Failed to scrape restaurant details",
+				s.logger.Error("Failed to scrape restaurant details",
 					zap.String("url", url),
+					zap.String("place_name", placeName),
+					zap.String("area", area),
 					zap.Error(err),
 				)
 				s.metrics.RecordScrapeError("details_failed")

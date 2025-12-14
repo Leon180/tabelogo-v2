@@ -54,18 +54,24 @@ func (uc *ScrapeRestaurantUseCase) Execute(ctx context.Context, req ScrapeRestau
 	// Create job
 	job := models.NewScrapingJob(req.GoogleID, req.Area, req.PlaceName)
 
-	// Save job
+	// Save job to repository
 	if err := uc.jobRepo.Save(ctx, job); err != nil {
-		return nil, fmt.Errorf("failed to save job: %w", err)
+		uc.logger.Error("Failed to save job",
+			zap.String("job_id", job.ID().String()),
+			zap.String("google_id", req.GoogleID),
+			zap.Error(err),
+		)
+		return nil, fmt.Errorf("failed to save scraping job for place '%s' (google_id: %s): %w", req.PlaceName, req.GoogleID, err)
 	}
 
 	// Submit to job processor (worker pool)
 	if err := uc.jobProcessor.SubmitJob(ctx, job.ID()); err != nil {
 		uc.logger.Error("Failed to submit job to processor",
 			zap.String("job_id", job.ID().String()),
+			zap.String("google_id", req.GoogleID),
 			zap.Error(err),
 		)
-		return nil, fmt.Errorf("failed to submit job: %w", err)
+		return nil, fmt.Errorf("failed to submit scraping job %s for place '%s': %w", job.ID().String(), req.PlaceName, err)
 	}
 
 	uc.logger.Info("Job submitted to worker pool",
