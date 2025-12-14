@@ -23,6 +23,9 @@ var Module = fx.Module("spider.infrastructure",
 	// Metrics
 	fx.Provide(metrics.NewSpiderMetrics),
 
+	// Redis client
+	fx.Provide(newRedisClient),
+
 	// Persistence
 	fx.Provide(
 		fx.Annotate(
@@ -41,6 +44,15 @@ var Module = fx.Module("spider.infrastructure",
 		newScraper,
 	),
 )
+
+// newRedisClient creates a Redis client from main config
+func newRedisClient(cfg *pkgconfig.Config) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+}
 
 // newRedisResultCache creates a Redis result cache with configured TTL
 func newRedisResultCache(client *redis.Client, logger *zap.Logger, cfg *config.SpiderConfig) repositories.ResultCacheRepository {
