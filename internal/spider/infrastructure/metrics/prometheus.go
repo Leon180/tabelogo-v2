@@ -11,7 +11,7 @@ type SpiderMetrics struct {
 	ScrapeRequestsTotal *prometheus.CounterVec
 	ScrapeDuration      *prometheus.HistogramVec
 	ScrapeErrorsTotal   *prometheus.CounterVec
-	RestaurantsScraped  prometheus.Counter
+	RestaurantsScraped  *prometheus.CounterVec
 
 	// Job processing metrics
 	JobsTotal      *prometheus.CounterVec
@@ -20,9 +20,9 @@ type SpiderMetrics struct {
 	JobQueueLength prometheus.Gauge
 
 	// Cache metrics
-	CacheHitsTotal   prometheus.Counter
-	CacheMissesTotal prometheus.Counter
-	CacheSizeBytes   prometheus.Gauge
+	CacheHitsTotal   *prometheus.CounterVec
+	CacheMissesTotal *prometheus.CounterVec
+	CacheSizeBytes   *prometheus.GaugeVec
 
 	// Circuit breaker metrics
 	CircuitBreakerState    *prometheus.GaugeVec
@@ -46,7 +46,7 @@ func NewSpiderMetrics() *SpiderMetrics {
 				Help:    "Duration of scrape operations in seconds",
 				Buckets: prometheus.DefBuckets,
 			},
-			[]string{"operation"}, // search, details
+			[]string{"operation", "status"}, // operation: search, details; status: success, failure
 		),
 		ScrapeErrorsTotal: promauto.NewCounterVec(
 			prometheus.CounterOpts{
@@ -55,11 +55,12 @@ func NewSpiderMetrics() *SpiderMetrics {
 			},
 			[]string{"error_type"}, // network, parse, not_found, circuit_breaker
 		),
-		RestaurantsScraped: promauto.NewCounter(
+		RestaurantsScraped: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "spider_restaurants_scraped_total",
-				Help: "Total number of restaurants successfully scraped",
+				Help: "Total number of restaurants scraped by status",
 			},
+			[]string{"status"}, // success, failure
 		),
 
 		// Job processing metrics
@@ -92,23 +93,26 @@ func NewSpiderMetrics() *SpiderMetrics {
 		),
 
 		// Cache metrics
-		CacheHitsTotal: promauto.NewCounter(
+		CacheHitsTotal: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "spider_cache_hits_total",
-				Help: "Total number of cache hits",
+				Help: "Total number of cache hits by cache type",
 			},
+			[]string{"cache_type"}, // result, job
 		),
-		CacheMissesTotal: promauto.NewCounter(
+		CacheMissesTotal: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "spider_cache_misses_total",
-				Help: "Total number of cache misses",
+				Help: "Total number of cache misses by cache type",
 			},
+			[]string{"cache_type"}, // result, job
 		),
-		CacheSizeBytes: promauto.NewGauge(
+		CacheSizeBytes: promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "spider_cache_size_bytes",
-				Help: "Approximate size of cache in bytes",
+				Help: "Approximate size of cache in bytes by cache type",
 			},
+			[]string{"cache_type"}, // result, job
 		),
 
 		// Circuit breaker metrics
@@ -135,8 +139,8 @@ func (m *SpiderMetrics) RecordScrapeRequest(status string) {
 }
 
 // RecordScrapeDuration records the duration of a scrape operation
-func (m *SpiderMetrics) RecordScrapeDuration(operation string, duration float64) {
-	m.ScrapeDuration.WithLabelValues(operation).Observe(duration)
+func (m *SpiderMetrics) RecordScrapeDuration(operation, status string, duration float64) {
+	m.ScrapeDuration.WithLabelValues(operation, status).Observe(duration)
 }
 
 // RecordScrapeError records a scrape error by type
@@ -144,9 +148,9 @@ func (m *SpiderMetrics) RecordScrapeError(errorType string) {
 	m.ScrapeErrorsTotal.WithLabelValues(errorType).Inc()
 }
 
-// RecordRestaurantsScraped increments the total restaurants scraped counter
-func (m *SpiderMetrics) RecordRestaurantsScraped(count int) {
-	m.RestaurantsScraped.Add(float64(count))
+// RecordRestaurantsScraped increments the total restaurants scraped counter by status
+func (m *SpiderMetrics) RecordRestaurantsScraped(status string, count int) {
+	m.RestaurantsScraped.WithLabelValues(status).Add(float64(count))
 }
 
 // RecordJob records a job by status
@@ -169,19 +173,19 @@ func (m *SpiderMetrics) SetJobQueueLength(length int) {
 	m.JobQueueLength.Set(float64(length))
 }
 
-// RecordCacheHit increments the cache hit counter
-func (m *SpiderMetrics) RecordCacheHit() {
-	m.CacheHitsTotal.Inc()
+// RecordCacheHit increments the cache hit counter for a specific cache type
+func (m *SpiderMetrics) RecordCacheHit(cacheType string) {
+	m.CacheHitsTotal.WithLabelValues(cacheType).Inc()
 }
 
-// RecordCacheMiss increments the cache miss counter
-func (m *SpiderMetrics) RecordCacheMiss() {
-	m.CacheMissesTotal.Inc()
+// RecordCacheMiss increments the cache miss counter for a specific cache type
+func (m *SpiderMetrics) RecordCacheMiss(cacheType string) {
+	m.CacheMissesTotal.WithLabelValues(cacheType).Inc()
 }
 
-// SetCacheSize sets the approximate cache size in bytes
-func (m *SpiderMetrics) SetCacheSize(bytes int64) {
-	m.CacheSizeBytes.Set(float64(bytes))
+// SetCacheSize sets the approximate cache size in bytes for a specific cache type
+func (m *SpiderMetrics) SetCacheSize(cacheType string, bytes int64) {
+	m.CacheSizeBytes.WithLabelValues(cacheType).Set(float64(bytes))
 }
 
 // SetCircuitBreakerState sets the circuit breaker state

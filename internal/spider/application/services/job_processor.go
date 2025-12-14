@@ -219,7 +219,7 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 	// Record metrics
 	p.metrics.RecordJob("completed")
 	p.metrics.RecordJobDuration("completed", time.Since(jobStartTime).Seconds())
-	p.metrics.RecordRestaurantsScraped(len(resultPtrs))
+	p.metrics.RecordRestaurantsScraped("success", len(resultPtrs))
 
 	// Cache results
 	logger.Info("Attempting to cache results",
