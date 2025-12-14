@@ -21,16 +21,17 @@ type Scraper struct {
 	logger         *zap.Logger
 	circuitBreaker *gobreaker.CircuitBreaker
 	metrics        *metrics.SpiderMetrics
+	areaMapper     *AreaMapper // Added areaMapper field
 }
 
 // NewScraper creates a new scraper
-func NewScraper(config *models.ScraperConfig, metrics *metrics.SpiderMetrics, logger *zap.Logger) *Scraper {
-	scraperLogger := logger.With(zap.String("component", "scraper"))
+func NewScraper(logger *zap.Logger, metrics *metrics.SpiderMetrics, config *models.ScraperConfig, cb *gobreaker.CircuitBreaker) *Scraper {
 	return &Scraper{
-		config:         config,
-		logger:         scraperLogger,
-		circuitBreaker: NewCircuitBreaker(scraperLogger, metrics, DefaultCircuitBreakerConfig()),
+		logger:         logger,
 		metrics:        metrics,
+		config:         config,
+		circuitBreaker: cb,
+		areaMapper:     NewAreaMapper(logger), // Pass logger to NewAreaMapper
 	}
 }
 

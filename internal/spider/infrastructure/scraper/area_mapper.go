@@ -1,20 +1,23 @@
 package scraper
 
 import (
-	"fmt"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 // AreaMapper maps Google Maps addresses to Tabelog area codes
 type AreaMapper struct {
 	// Map of area names to Tabelog area codes
 	areaCodeMap map[string]string
+	logger      *zap.Logger
 }
 
 // NewAreaMapper creates a new area mapper
-func NewAreaMapper() *AreaMapper {
+func NewAreaMapper(logger *zap.Logger) *AreaMapper {
 	return &AreaMapper{
 		areaCodeMap: buildAreaCodeMap(),
+		logger:      logger,
 	}
 }
 
@@ -30,21 +33,32 @@ func (m *AreaMapper) MapToTabelogArea(address string) string {
 	// Special case: if input is just "tokyo" (administrative_area_level_1),
 	// use general Tokyo search
 	if address == "tokyo" || address == "tōkyō" || address == "東京" {
-		fmt.Printf("🗺️  Area Mapper: '%s' -> 'tokyo' (administrative area level 1)\n", originalAddress)
+		m.logger.Debug("Area mapped to Tokyo general search",
+			zap.String("original", originalAddress),
+			zap.String("mapped", "tokyo"),
+			zap.String("reason", "administrative area level 1"),
+		)
 		return "tokyo"
 	}
 
 	// Try to find matching area (ward/city level)
 	for areaName, areaCode := range m.areaCodeMap {
 		if strings.Contains(address, areaName) {
-			// Log successful mapping
-			fmt.Printf("🗺️  Area Mapper: '%s' -> '%s' (matched '%s')\n", originalAddress, areaCode, areaName)
+			m.logger.Debug("Area mapped successfully",
+				zap.String("original", originalAddress),
+				zap.String("mapped", areaCode),
+				zap.String("matched", areaName),
+			)
 			return areaCode
 		}
 	}
 
 	// Default to Tokyo general search if no specific area found
-	fmt.Printf("⚠️  Area Mapper: '%s' -> 'tokyo' (no match found, using default)\n", originalAddress)
+	m.logger.Debug("Area mapped to default",
+		zap.String("original", originalAddress),
+		zap.String("mapped", "tokyo"),
+		zap.String("reason", "no specific area match found"),
+	)
 	return "tokyo"
 }
 
