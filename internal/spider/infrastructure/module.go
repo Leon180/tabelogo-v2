@@ -49,7 +49,7 @@ var Module = fx.Module("spider.infrastructure",
 // newRedisClient creates a Redis client from main config
 func newRedisClient(cfg *pkgconfig.Config) *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr,
+		Addr:     cfg.GetRedisAddr(), // Use helper method that formats Host:Port
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
