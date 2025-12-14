@@ -9,6 +9,7 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/persistence"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/scraper"
+	pkgconfig "github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/redis/go-redis/v9"
 	"github.com/sony/gobreaker"
 	"go.uber.org/fx"
