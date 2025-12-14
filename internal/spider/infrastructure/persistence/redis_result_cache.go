@@ -63,11 +63,17 @@ func (r *RedisResultCache) Get(ctx context.Context, googleID string) (*models.Ca
 func (r *RedisResultCache) Set(ctx context.Context, googleID string, restaurants []models.TabelogRestaurant, ttl time.Duration) error {
 	key := r.cacheKey(googleID)
 
+	// Convert domain models to DTOs for JSON serialization
+	dtos := make([]models.TabelogRestaurantDTO, len(restaurants))
+	for i, restaurant := range restaurants {
+		dtos[i] = restaurant.ToDTO()
+	}
+
 	cached := &models.CachedResult{
-		GoogleID:    googleID,
-		Restaurants: restaurants,
-		CachedAt:    time.Now(),
-		ExpiresAt:   time.Now().Add(ttl),
+		PlaceID:   googleID,
+		Results:   dtos,
+		CachedAt:  time.Now(),
+		ExpiresAt: time.Now().Add(ttl),
 	}
 
 	if err := r.helper.SetJSON(ctx, key, cached, ttl); err != nil {
