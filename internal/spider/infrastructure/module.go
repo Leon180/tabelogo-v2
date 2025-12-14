@@ -59,9 +59,7 @@ func newCircuitBreaker(logger *zap.Logger, m *metrics.SpiderMetrics, cfg *config
 
 // newScraper creates a scraper with dependencies
 func newScraper(logger *zap.Logger, m *metrics.SpiderMetrics, cb *gobreaker.CircuitBreaker) *scraper.Scraper {
-	scraperConfig := &models.ScraperConfig{
-		UserAgent:      "Mozilla/5.0 (compatible; TabelogoBot/1.0)",
-		RequestTimeout: 30 * time.Second,
-	}
+	scraperConfig := models.NewScraperConfig().
+		WithTimeout(30 * time.Second)
 	return scraper.NewScraper(logger, m, scraperConfig, cb)
 }
