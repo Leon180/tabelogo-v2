@@ -203,7 +203,17 @@ generate-mocks:
 	mockgen -source=internal/restaurant/application/map_client.go \
 		-destination=internal/restaurant/mocks/mock_map_service_client.go \
 		-package=mocks
-	@echo "✅ Mocks generated in internal/restaurant/mocks/"
+	@echo "✅ Restaurant mocks generated"
+	@echo "Generating spider service mocks..."
+	@cd internal/spider && go generate ./domain/repositories/...
+	@echo "✅ Spider mocks generated in internal/spider/testutil/mocks/"
+	@echo "✅ All mocks generated"
+
+.PHONY: generate-spider-mocks
+generate-spider-mocks:
+	@echo "Generating spider service mocks..."
+	@cd internal/spider && go generate ./domain/repositories/...
+	@echo "✅ Spider mocks generated"
 
 .PHONY: test-with-mocks
 test-with-mocks: generate-mocks

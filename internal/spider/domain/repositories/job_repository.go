@@ -1,3 +1,4 @@
+//go:generate mockgen -destination=../../testutil/mocks/mock_job_repository.go -package=mocks github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories JobRepository
 package repositories
 
 import (
