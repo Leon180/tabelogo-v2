@@ -1,6 +1,8 @@
 package infrastructure
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/config"
@@ -31,6 +33,16 @@ var Module = fx.Module("spider.infrastructure",
 			newRedisResultCache,
 			fx.As(new(repositories.ResultCacheRepository)),
 		),
+	),
+
+	// Scraper with circuit breaker
+	fx.Provide(
+		newCircuitBreaker,
+		newScraper,
+	),
+)
+
+// NewRedis creates a new Redis client and manages its lifecycle with Fx.
 func NewRedis(cfg *config.Config, lc fx.Lifecycle, logger *zap.Logger) *redisclient.Client {
 	rdb := redisclient.NewClient(&redisclient.Options{
 		Addr:     cfg.GetRedisAddr(),
@@ -54,4 +66,28 @@ func NewRedis(cfg *config.Config, lc fx.Lifecycle, logger *zap.Logger) *rediscli
 	})
 
 	return rdb
+}
+
+// newRedisResultCache creates a Redis result cache with configured TTL
+func newRedisResultCache(client *redis.Client, logger *zap.Logger, cfg *config.SpiderConfig) repositories.ResultCacheRepository {
+	return persistence.NewRedisResultCache(client, logger, cfg.CacheTTL)
+}
+
+// newCircuitBreaker creates a circuit breaker with configured settings
+func newCircuitBreaker(logger *zap.Logger, metrics *metrics.SpiderMetrics, cfg *config.SpiderConfig) *scraper.CircuitBreaker {
+	cbConfig := scraper.CircuitBreakerConfig{
+		MaxRequests: cfg.CircuitBreaker.MaxRequests,
+		Interval:    cfg.CircuitBreaker.Interval,
+		Timeout:     cfg.CircuitBreaker.Timeout,
+	}
+	return scraper.NewCircuitBreaker(logger, metrics, cbConfig)
+}
+
+// newScraper creates a scraper with dependencies
+func newScraper(logger *zap.Logger, metrics *metrics.SpiderMetrics, cb *scraper.CircuitBreaker) *scraper.Scraper {
+	scraperConfig := &scraper.ScraperConfig{
+		UserAgent:      "Mozilla/5.0 (compatible; TabelogoBot/1.0)",
+		RequestTimeout: 30 * time.Second,
+	}
+	return scraper.NewScraper(logger, metrics, scraperConfig, cb)
 }
