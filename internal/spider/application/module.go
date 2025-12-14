@@ -20,19 +20,23 @@ var Module = fx.Module("application",
 	fx.Provide(
 		usecases.NewScrapeRestaurantUseCase,
 		usecases.NewGetJobStatusUseCase,
+	),
 
-// StartJobProcessor starts the job processor with lifecycle management
-func StartJobProcessor(lc fx.Lifecycle, processor *services.JobProcessor, logger *zap.Logger) {
+	// Lifecycle hooks for job processor
+	fx.Invoke(registerJobProcessorLifecycle),
+)
+
+// registerJobProcessorLifecycle registers lifecycle hooks for the job processor
+func registerJobProcessorLifecycle(lc fx.Lifecycle, processor *services.JobProcessor) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting job processor")
-			// Use background context for long-running workers
-			// The hook ctx is only for startup timeout, not for worker lifetime
-			processor.Start(context.Background())
+			// Start the job processor with a background context
+			// The processor runs continuously and manages its own lifecycle
+			go processor.Start(ctx)
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping job processor")
+			// Stop the processor gracefully
 			return processor.Stop(ctx)
 		},
 	})
