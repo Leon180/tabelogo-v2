@@ -36,7 +36,7 @@ func newJobProcessor(
 var Module = fx.Module("application",
 	// Services
 	fx.Provide(
-		newJobProcessor,
+		newJobProcessor, // Use our custom provider that injects workerCount
 	),
 
 	// Use cases
