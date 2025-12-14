@@ -68,7 +68,7 @@ func (p *JobProcessor) Start(ctx context.Context) {
 						zap.Any("panic", r),
 						zap.Stack("stack"),
 					)
-					p.metrics.RecordJobError("worker_panic")
+					p.metrics.RecordScrapeError("worker_panic")
 				}
 			}()
 			p.worker(ctx, workerID)
