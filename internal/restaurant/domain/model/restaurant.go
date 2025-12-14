@@ -10,8 +10,8 @@ import (
 type RestaurantSource string
 
 const (
-	SourceTabelog  RestaurantSource = "tabelog"
-	SourceGoogle   RestaurantSource = "google"
+	SourceTabelog   RestaurantSource = "tabelog"
+	SourceGoogle    RestaurantSource = "google"
 	SourceOpenTable RestaurantSource = "opentable"
 )
 
@@ -19,6 +19,8 @@ const (
 type Restaurant struct {
 	id           uuid.UUID
 	name         string
+	nameJa       string // Japanese name for better Tabelog search
+	area         string // Administrative area level 1 (e.g., Tokyo, Osaka)
 	source       RestaurantSource
 	externalID   string
 	address      string
@@ -39,6 +41,7 @@ type Restaurant struct {
 // NewRestaurant creates a new restaurant
 func NewRestaurant(
 	name string,
+	area string,
 	source RestaurantSource,
 	externalID string,
 	address string,
@@ -48,6 +51,8 @@ func NewRestaurant(
 	return &Restaurant{
 		id:           uuid.New(),
 		name:         name,
+		nameJa:       "", // Will be set later via frontend or update API
+		area:         area,
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -66,11 +71,62 @@ func NewRestaurant(
 	}
 }
 
+// NewRestaurantWithDetails creates a new restaurant with complete details
+func NewRestaurantWithDetails(
+	name string,
+	area string,
+	source RestaurantSource,
+	externalID string,
+	address string,
+	location *Location,
+	rating float64,
+	priceRange string,
+	cuisineType string,
+	phone string,
+	website string,
+	openingHours map[string]string,
+	metadata map[string]interface{},
+) *Restaurant {
+	now := time.Now()
+
+	// Initialize maps if nil
+	if openingHours == nil {
+		openingHours = make(map[string]string)
+	}
+	if metadata == nil {
+		metadata = make(map[string]interface{})
+	}
+
+	return &Restaurant{
+		id:           uuid.New(),
+		name:         name,
+		nameJa:       "", // Will be set later
+		area:         area,
+		source:       source,
+		externalID:   externalID,
+		address:      address,
+		location:     location,
+		rating:       rating,
+		priceRange:   priceRange,
+		cuisineType:  cuisineType,
+		phone:        phone,
+		website:      website,
+		openingHours: openingHours,
+		metadata:     metadata,
+		viewCount:    0,
+		createdAt:    now,
+		updatedAt:    now,
+		deletedAt:    nil,
+	}
+}
+
 // ReconstructRestaurant is used by repository to reconstruct the Restaurant entity from persistence
 // This should NOT be used by application layer to create new restaurants
 func ReconstructRestaurant(
 	id uuid.UUID,
 	name string,
+	nameJa string,
+	area string,
 	source RestaurantSource,
 	externalID string,
 	address string,
@@ -90,6 +146,8 @@ func ReconstructRestaurant(
 	return &Restaurant{
 		id:           id,
 		name:         name,
+		nameJa:       nameJa,
+		area:         area,
 		source:       source,
 		externalID:   externalID,
 		address:      address,
@@ -109,25 +167,39 @@ func ReconstructRestaurant(
 }
 
 // Getters
-func (r *Restaurant) ID() uuid.UUID                       { return r.id }
-func (r *Restaurant) Name() string                        { return r.name }
-func (r *Restaurant) Source() RestaurantSource            { return r.source }
-func (r *Restaurant) ExternalID() string                  { return r.externalID }
-func (r *Restaurant) Address() string                     { return r.address }
-func (r *Restaurant) Location() *Location                 { return r.location }
-func (r *Restaurant) Rating() float64                     { return r.rating }
-func (r *Restaurant) PriceRange() string                  { return r.priceRange }
-func (r *Restaurant) CuisineType() string                 { return r.cuisineType }
-func (r *Restaurant) Phone() string                       { return r.phone }
-func (r *Restaurant) Website() string                     { return r.website }
-func (r *Restaurant) OpeningHours() map[string]string     { return r.openingHours }
-func (r *Restaurant) Metadata() map[string]interface{}    { return r.metadata }
-func (r *Restaurant) ViewCount() int64                    { return r.viewCount }
-func (r *Restaurant) CreatedAt() time.Time                { return r.createdAt }
-func (r *Restaurant) UpdatedAt() time.Time                { return r.updatedAt }
-func (r *Restaurant) DeletedAt() *time.Time               { return r.deletedAt }
+func (r *Restaurant) ID() uuid.UUID                    { return r.id }
+func (r *Restaurant) Name() string                     { return r.name }
+func (r *Restaurant) NameJa() string                   { return r.nameJa }
+func (r *Restaurant) Area() string                     { return r.area }
+func (r *Restaurant) Source() RestaurantSource         { return r.source }
+func (r *Restaurant) ExternalID() string               { return r.externalID }
+func (r *Restaurant) Address() string                  { return r.address }
+func (r *Restaurant) Location() *Location              { return r.location }
+func (r *Restaurant) Rating() float64                  { return r.rating }
+func (r *Restaurant) PriceRange() string               { return r.priceRange }
+func (r *Restaurant) CuisineType() string              { return r.cuisineType }
+func (r *Restaurant) Phone() string                    { return r.phone }
+func (r *Restaurant) Website() string                  { return r.website }
+func (r *Restaurant) OpeningHours() map[string]string  { return r.openingHours }
+func (r *Restaurant) Metadata() map[string]interface{} { return r.metadata }
+func (r *Restaurant) ViewCount() int64                 { return r.viewCount }
+func (r *Restaurant) CreatedAt() time.Time             { return r.createdAt }
+func (r *Restaurant) UpdatedAt() time.Time             { return r.updatedAt }
+func (r *Restaurant) DeletedAt() *time.Time            { return r.deletedAt }
 
 // Domain Methods
+
+// UpdateName updates the restaurant's name
+func (r *Restaurant) UpdateName(name string) {
+	r.name = name
+	r.updatedAt = time.Now()
+}
+
+// UpdateAddress updates the restaurant's address
+func (r *Restaurant) UpdateAddress(address string) {
+	r.address = address
+	r.updatedAt = time.Now()
+}
 
 // UpdateRating updates the restaurant's rating
 func (r *Restaurant) UpdateRating(rating float64) {
@@ -138,6 +210,42 @@ func (r *Restaurant) UpdateRating(rating float64) {
 		rating = 5.0
 	}
 	r.rating = rating
+	r.updatedAt = time.Now()
+}
+
+// UpdateNameJa updates the Japanese name
+func (r *Restaurant) UpdateNameJa(nameJa string) {
+	r.nameJa = nameJa
+	r.updatedAt = time.Now()
+}
+
+// UpdateArea updates the area
+func (r *Restaurant) UpdateArea(area string) {
+	r.area = area
+	r.updatedAt = time.Now()
+}
+
+// UpdatePriceRange updates the price range
+func (r *Restaurant) UpdatePriceRange(priceRange string) {
+	r.priceRange = priceRange
+	r.updatedAt = time.Now()
+}
+
+// UpdateCuisineType updates the cuisine type
+func (r *Restaurant) UpdateCuisineType(cuisineType string) {
+	r.cuisineType = cuisineType
+	r.updatedAt = time.Now()
+}
+
+// UpdatePhone updates the phone number
+func (r *Restaurant) UpdatePhone(phone string) {
+	r.phone = phone
+	r.updatedAt = time.Now()
+}
+
+// UpdateWebsite updates the website URL
+func (r *Restaurant) UpdateWebsite(website string) {
+	r.website = website
 	r.updatedAt = time.Now()
 }
 
@@ -189,6 +297,14 @@ func (r *Restaurant) SetOpeningHours(day, hours string) {
 	r.updatedAt = time.Now()
 }
 
+// UpdateOpeningHours replaces all opening hours with a new map
+func (r *Restaurant) UpdateOpeningHours(openingHours map[string]string) {
+	if openingHours != nil {
+		r.openingHours = openingHours
+		r.updatedAt = time.Now()
+	}
+}
+
 // SetMetadata sets a metadata key-value pair
 func (r *Restaurant) SetMetadata(key string, value interface{}) {
 	if r.metadata == nil {
@@ -196,6 +312,14 @@ func (r *Restaurant) SetMetadata(key string, value interface{}) {
 	}
 	r.metadata[key] = value
 	r.updatedAt = time.Now()
+}
+
+// UpdateMetadata replaces all metadata with a new map
+func (r *Restaurant) UpdateMetadata(metadata map[string]interface{}) {
+	if metadata != nil {
+		r.metadata = metadata
+		r.updatedAt = time.Now()
+	}
 }
 
 // SoftDelete marks the restaurant as deleted

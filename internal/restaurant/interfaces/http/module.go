@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Leon180/tabelogo-v2/internal/restaurant/docs"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -26,7 +30,14 @@ func NewHTTPServer(cfg *config.Config) *gin.Engine {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := gin.Default()
+	router := gin.New()
+
+	// Configure middleware
+	router.Use(gin.Recovery())
+	router.Use(gin.Logger())
+	router.Use(CORSMiddleware()) // Enable CORS for frontend
+	router.Use(MetricsMiddleware())
+
 	return router
 }
 
@@ -38,15 +49,36 @@ func RegisterRoutes(
 	cfg *config.Config,
 	logger *zap.Logger,
 ) {
+	// Swagger documentation endpoints
+	// Set base path for Swagger docs
+	docs.SwaggerInfo.BasePath = "/api/v1"
+
+	// Serve Swagger UI at /swagger/*
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Also serve at service-specific path for consistency
+	router.GET("/restaurant-service/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Prometheus metrics
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Health check
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+		})
+	})
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
-		// Restaurant routes
 		restaurants := v1.Group("/restaurants")
 		{
 			restaurants.POST("", handler.CreateRestaurant)
 			restaurants.GET("/:id", handler.GetRestaurant)
+			restaurants.PATCH("/:id", handler.UpdateRestaurant)
 			restaurants.GET("/search", handler.SearchRestaurants)
+			restaurants.GET("/quick-search/:place_id", handler.QuickSearchByPlaceID)
 		}
 
 		// Favorite routes
@@ -59,18 +91,15 @@ func RegisterRoutes(
 		v1.GET("/users/:userId/favorites", handler.GetUserFavorites)
 	}
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "healthy",
-		})
-	})
-
 	// Lifecycle hooks
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			addr := fmt.Sprintf(":%d", cfg.ServerPort)
-			logger.Info("Starting HTTP server", zap.String("addr", addr))
+			logger.Info("Starting HTTP server",
+				zap.String("addr", addr),
+				zap.String("swagger", fmt.Sprintf("http://localhost:%d/swagger", cfg.ServerPort)),
+				zap.String("metrics", fmt.Sprintf("http://localhost:%d/metrics", cfg.ServerPort)),
+			)
 
 			go func() {
 				if err := router.Run(addr); err != nil && err != http.ErrServerClosed {

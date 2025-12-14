@@ -58,8 +58,8 @@ func (c *GooglePlacesClient) GetPlaceDetails(
 	if fieldMask != "" {
 		req.Header.Set("X-Goog-FieldMask", fieldMask)
 	} else {
-		// Default field mask
-		req.Header.Set("X-Goog-FieldMask", "id,displayName,formattedAddress,location,rating,priceLevel,photos,currentOpeningHours")
+		// Default field mask - includes addressComponents for area extraction
+		req.Header.Set("X-Goog-FieldMask", "id,displayName,formattedAddress,location,rating,priceLevel,photos,currentOpeningHours,addressComponents")
 	}
 
 	c.logger.Info("Calling Google Places API",
@@ -97,6 +97,16 @@ func (c *GooglePlacesClient) GetPlaceDetails(
 		c.logger.Error("Failed to parse response", zap.Error(err))
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
+
+	// DEBUG: Log response keys to understand structure
+	keys := make([]string, 0, len(result))
+	for k := range result {
+		keys = append(keys, k)
+	}
+	c.logger.Info("Google API response keys",
+		zap.Strings("keys", keys),
+		zap.Bool("has_addressComponents", result["addressComponents"] != nil),
+	)
 
 	c.logger.Info("Successfully retrieved place details",
 		zap.String("place_id", placeID),
@@ -146,8 +156,8 @@ func (c *GooglePlacesClient) TextSearch(
 	if fieldMask != "" {
 		req.Header.Set("X-Goog-FieldMask", fieldMask)
 	} else {
-		// Default field mask for text search
-		req.Header.Set("X-Goog-FieldMask", "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.priceLevel,places.currentOpeningHours")
+		// Default field mask - includes addressComponents for area extraction
+		req.Header.Set("X-Goog-FieldMask", "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.priceLevel,places.currentOpeningHours,places.addressComponents")
 	}
 
 	c.logger.Info("Calling Google Text Search API",

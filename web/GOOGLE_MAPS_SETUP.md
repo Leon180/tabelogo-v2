@@ -51,7 +51,7 @@
 ### 4.1 建立 Key
 
 1. 再次點擊 **+ CREATE CREDENTIALS** → **API key**
-2. 複製生成的 API key: AIzaSyBTB8hEYIZ1JCFAg4bV7B6tN2V9ENidO2o
+2. 複製生成的 API key: `your_google_maps_api_key_here`
 
 ### 4.2 設定限制
 

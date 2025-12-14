@@ -16,15 +16,25 @@ COPY cmd/restaurant-service/go.mod cmd/restaurant-service/go.sum ./cmd/restauran
 WORKDIR /app/cmd/restaurant-service
 RUN GOWORK=off go mod download
 
-# Install swag CLI for Swagger generation (optional for future)
+# Install swag CLI for Swagger generation
 RUN go install github.com/swaggo/swag/cmd/swag@latest
 
 # Copy source code
 WORKDIR /app
 COPY . .
 
-# Build the application (with GOWORK=off)
+# Generate Swagger documentation (run from service directory to limit scope)
 WORKDIR /app/cmd/restaurant-service
+RUN swag init \
+    --generalInfo main.go \
+    --dir .,../../internal/restaurant/interfaces/http \
+    --output ../../internal/restaurant/docs
+
+# Ensure go.sum is up to date (with GOWORK=off)
+WORKDIR /app/cmd/restaurant-service
+RUN GOWORK=off go mod tidy
+
+# Build the application (with GOWORK=off)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOWORK=off \
     go build -ldflags="-w -s" -o /app/bin/restaurant-service .
 
@@ -53,6 +63,9 @@ COPY --from=builder /go/bin/migrate .
 # Copy migrations
 COPY --from=builder /app/migrations/restaurant ./migrations/restaurant
 
+# Copy Swagger docs from builder (maintain directory structure)
+COPY --from=builder /app/internal/restaurant/docs ./internal/restaurant/docs
+
 # Copy entrypoint script
 COPY cmd/restaurant-service/entrypoint.sh .
 RUN chmod +x entrypoint.sh
@@ -63,8 +76,8 @@ RUN chown -R appuser:appuser /app
 # Switch to non-root user
 USER appuser
 
-# Expose HTTP port
-EXPOSE 18082
+# Expose HTTP and gRPC ports
+EXPOSE 18082 19082
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

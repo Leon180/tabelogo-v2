@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X, MapPin, Star, DollarSign, Clock, Phone, Globe, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
+import { useRestaurantQuickSearch } from '@/hooks/useRestaurantSearch';
 import { useQuickSearch } from '@/hooks/useMapSearch';
 import { getPlacePhotoUrl, getPlaceholderImageUrl } from '@/lib/utils/getPlacePhotoUrl';
+import { updateRestaurant } from '@/lib/api/restaurant-service';
+import { getJapaneseName, quickSearch } from '@/lib/api/map-service';
+import { searchTabelog, type TabelogRestaurant } from '@/lib/api/spider-service';
+import { ScrapingStatusDisplay, type ScrapingStatus } from '@/components/Spider/ScrapingStatus';
 import type { Place } from '@/types/search';
 
 interface PlaceDetailModalProps {
@@ -14,9 +19,29 @@ interface PlaceDetailModalProps {
 }
 
 export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalProps) {
-  const { data, isLoading, error } = useQuickSearch(
-    isOpen ? { place_id: placeId, language_code: 'en' } : null
+  // NEW: Use Restaurant Service (cache-first)
+  const { data: restaurantData, isLoading: isRestaurantLoading, error: restaurantError } = useRestaurantQuickSearch(
+    isOpen ? placeId : null
   );
+
+  // FALLBACK: Use Map Service if Restaurant Service fails
+  // IMPORTANT: Use English (en) for area extraction and basic info
+  const { data: mapData, isLoading: isMapLoading, error: mapError } = useQuickSearch(
+    isOpen && restaurantError ? { place_id: placeId, language_code: 'en' } : null
+  );
+
+  // Use Restaurant Service data if available, otherwise fall back to Map Service
+  const data = restaurantData || mapData;
+  const isLoading = isRestaurantLoading || isMapLoading;
+  const error = restaurantError && mapError ? mapError : null;
+
+  // Tabelog integration state
+  const [isUpdatingJaName, setIsUpdatingJaName] = useState(false);
+  const [japaneseName, setJapaneseName] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [tabelogResults, setTabelogResults] = useState<TabelogRestaurant[]>([]);
+  const [scrapingStatus, setScrapingStatus] = useState<ScrapingStatus | null>(null);
+  const [scrapingMessage, setScrapingMessage] = useState<string>('');
 
   // Close modal on ESC key
   useEffect(() => {
@@ -35,7 +60,180 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
 
   if (!isOpen) return null;
 
-  const place = data?.result;
+  // Extract place data - Restaurant Service returns different format
+  const place = restaurantData ? convertRestaurantToPlace(restaurantData.restaurant) : mapData?.result;
+
+  // Helper function to convert Restaurant Service format to Place format
+  function convertRestaurantToPlace(restaurant: any): Place {
+    return {
+      id: restaurant.external_id,
+      area: restaurant.area,
+      displayName: { text: restaurant.name },
+      formattedAddress: restaurant.address,
+      location: {
+        latitude: restaurant.latitude,
+        longitude: restaurant.longitude,
+      },
+      rating: restaurant.rating,
+      priceLevel: restaurant.price_range ? `PRICE_LEVEL_${restaurant.price_range}` : undefined,
+      nationalPhoneNumber: restaurant.phone,
+      websiteUri: restaurant.website,
+      // Note: Restaurant Service doesn't include photos, opening hours yet
+      // These will be added in future updates
+    } as Place;
+  }
+
+  // Handle Tabelog button click
+  const handleTabelogClick = async () => {
+    console.log('🍜 Tabelog button clicked');
+
+    if (!restaurantData?.restaurant) {
+      setUpdateError('Restaurant data not available');
+      return;
+    }
+
+    try {
+      setIsUpdatingJaName(true);
+      setUpdateError(null);
+      setScrapingStatus('pending');
+      setScrapingMessage('Preparing to search Tabelog...');
+
+      // 1. Get Japanese name and addressComponents from Map Service
+      console.log('📞 Fetching Japanese name and addressComponents from Map Service');
+      const jaResponse = await quickSearch({
+        place_id: placeId,
+        language_code: 'ja',
+        // Request addressComponents field
+        api_mask: 'id,displayName'
+      });
+
+      const nameJa = jaResponse.result?.displayName?.text || place?.displayName?.text || '';
+      console.log('✅ Japanese name:', nameJa);
+
+      // 2. Extract place data with addressComponents from the Japanese API response
+      const placeWithComponents = jaResponse.result || place;
+
+      console.log('🚀 Preparing to call Spider Service:', {
+        google_id: placeId,
+        place_name: place?.displayName?.text || '',
+        place_name_ja: nameJa,
+      });
+
+      // 4. Update restaurant with Japanese name AND area
+      await updateRestaurant(restaurantData.restaurant.id, {
+        name_ja: nameJa
+      });
+
+      console.log('✅ Updated restaurant with name_ja and area');
+      console.log('Area:', place?.area);
+
+      // 5. Call Spider Service to search Tabelog with SSE progress
+      const tabelogResponse = await searchTabelog({
+        google_id: placeId,
+        place_name: place?.displayName?.text || '',
+        place_name_ja: nameJa,
+        area: place?.area || '', // Use extracted area from addressComponents
+        max_results: 10
+      }, (status) => {
+        // Normalize status to lowercase (backend sends UPPERCASE)
+        const normalizedStatus = status.toLowerCase() as ScrapingStatus;
+        setScrapingStatus(normalizedStatus);
+
+        const statusMessages: Record<string, string> = {
+          'pending': 'Queued for scraping...',
+          'running': 'Scraping Tabelog...',
+          'completed': 'Scraping complete!',
+          'failed': 'Scraping failed'
+        };
+        setScrapingMessage(statusMessages[normalizedStatus] || status);
+      });
+
+      console.log('✅ Spider Service response:', {
+        total_found: tabelogResponse.total_found,
+        restaurants_count: tabelogResponse.restaurants?.length || 0,
+        from_cache: tabelogResponse.from_cache
+      });
+
+      setTabelogResults(tabelogResponse.restaurants);
+      setScrapingStatus('completed');
+      setScrapingMessage(`Found ${tabelogResponse.total_found} restaurant${tabelogResponse.total_found === 1 ? '' : 's'}`);
+      console.log(`✅ Found ${tabelogResponse.total_found} Tabelog restaurants`);
+
+      // Clear status after 3 seconds
+      setTimeout(() => {
+        setScrapingStatus(null);
+        setScrapingMessage('');
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to search Tabelog:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to search Tabelog';
+      setUpdateError(errorMessage);
+      setScrapingStatus('failed');
+      setScrapingMessage(errorMessage);
+    } finally {
+      setIsUpdatingJaName(false);
+    }
+  };
+
+  // Helper function to extract area from Google Maps addressComponents
+  // Following v1 approach: extract locality (ward/city) from addressComponents
+  function extractArea(address: string): string {
+    // This is a fallback - ideally we should use addressComponents from place object
+    // For now, extract first part of address (e.g., "Sugamo, Tokyo" -> "Sugamo")
+    const parts = address.split(',');
+    return parts[0]?.trim() || '';
+  }
+
+  // Extract locality from place's addressComponents (preferred method)
+  // Following v1 approach: extract administrative_area_level_1 (e.g., "Tokyo")
+  function extractLocalityFromPlace(place: any): string {
+    console.log('🔍 Extracting locality from place:', {
+      hasAddressComponents: !!place?.addressComponents,
+      addressComponentsLength: place?.addressComponents?.length,
+      formattedAddress: place?.formattedAddress
+    });
+
+    if (!place?.addressComponents) {
+      const fallback = extractArea(place?.formattedAddress || '');
+      console.log('⚠️ No addressComponents, using fallback:', fallback);
+      return fallback;
+    }
+
+    // Find administrative_area_level_1 (prefecture/state level - e.g., "Tokyo")
+    // This matches v1 behavior
+    for (const component of place.addressComponents) {
+      const types = component.types || [];
+
+      console.log('📍 Checking component:', {
+        types,
+        longText: component.longText,
+        shortText: component.shortText
+      });
+
+      // Priority: administrative_area_level_1 (Tokyo, Osaka, etc.)
+      if (types.includes('administrative_area_level_1')) {
+        const result = component.longText || component.shortText || '';
+        console.log('✅ Found administrative_area_level_1:', result);
+        return result;
+      }
+    }
+
+    // Fallback to locality if administrative_area_level_1 not found
+    for (const component of place.addressComponents) {
+      const types = component.types || [];
+
+      if (types.includes('locality')) {
+        const result = component.longText || component.shortText || '';
+        console.log('✅ Found locality (fallback):', result);
+        return result;
+      }
+    }
+
+    // Final fallback to formatted address
+    const fallback = extractArea(place?.formattedAddress || '');
+    console.log('⚠️ No area component found, using fallback:', fallback);
+    return fallback;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -83,10 +281,16 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                   </div>
                 )}
 
-                {/* Cache Badge */}
-                {data?.source === 'redis' && (
-                  <div className="absolute top-4 left-4 px-3 py-1 bg-green-500/90 text-white text-xs font-medium rounded-full">
-                    ⚡ Cached
+                {/* Cache Badge - Show if using Restaurant Service cache */}
+                {restaurantData && (
+                  <div className="absolute top-4 left-4 px-3 py-1 bg-green-500/90 text-white text-xs font-medium rounded-full flex items-center gap-1">
+                    ⚡ Restaurant Service (Cached)
+                  </div>
+                )}
+                {/* Fallback Badge - Show if using Map Service */}
+                {!restaurantData && mapData?.source === 'redis' && (
+                  <div className="absolute top-4 left-4 px-3 py-1 bg-blue-500/90 text-white text-xs font-medium rounded-full">
+                    Map Service (Cached)
                   </div>
                 )}
               </div>
@@ -182,6 +386,124 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
                     </div>
                   )}
                 </div>
+
+                {/* Tabelog Integration - Only show if restaurant data available */}
+                {restaurantData?.restaurant && (
+                  <div className="pt-4 border-t border-zinc-700">
+                    <button
+                      onClick={handleTabelogClick}
+                      disabled={isUpdatingJaName}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                    >
+                      {isUpdatingJaName ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Updating...
+                        </span>
+                      ) : (
+                        '🍜 Search Tabelog'
+                      )}
+                    </button>
+
+                    {/* Japanese Name Display */}
+                    {japaneseName && (
+                      <div className="mt-3 p-3 bg-green-900/30 border border-green-700/50 rounded-lg">
+                        <p className="text-sm text-green-400 font-medium">
+                          ✓ Japanese name: {japaneseName}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Scraping Status Display */}
+                    {scrapingStatus && (
+                      <div className="mt-3">
+                        <ScrapingStatusDisplay
+                          status={scrapingStatus}
+                          message={scrapingMessage}
+                          resultsCount={tabelogResults.length}
+                          error={updateError || undefined}
+                          onRetry={scrapingStatus === 'failed' ? handleTabelogClick : undefined}
+                        />
+                      </div>
+                    )}
+
+                    {/* Error Display (legacy, kept for non-scraping errors) */}
+                    {updateError && !scrapingStatus && (
+                      <div className="mt-3 p-3 bg-red-900/30 border border-red-700/50 rounded-lg">
+                        <p className="text-sm text-red-400">
+                          ✗ {updateError}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Tabelog Results */}
+                    {tabelogResults && tabelogResults.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-lg font-semibold text-white mb-3">
+                          🍜 Tabelog Results ({tabelogResults.length})
+                        </h3>
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {tabelogResults.map((restaurant, index) => (
+                            <a
+                              key={index}
+                              href={restaurant.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block p-3 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors border border-zinc-700/50 hover:border-orange-600/50"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-white truncate">
+                                    {restaurant.name}
+                                  </h4>
+                                  {restaurant.types && restaurant.types.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {restaurant.types.slice(0, 3).map((type, i) => (
+                                        <span
+                                          key={i}
+                                          className="text-xs px-2 py-0.5 bg-zinc-700/50 text-zinc-300 rounded"
+                                        >
+                                          {type}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                  {restaurant.rating > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-yellow-400">⭐</span>
+                                      <span className="text-sm font-medium text-white">
+                                        {restaurant.rating.toFixed(2)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {restaurant.rating_count > 0 && (
+                                    <span className="text-xs text-zinc-400">
+                                      {restaurant.rating_count} reviews
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {restaurant.photos && restaurant.photos.length > 0 && (
+                                <div className="mt-2 flex gap-2 overflow-x-auto">
+                                  {restaurant.photos.slice(0, 3).map((photo, i) => (
+                                    <img
+                                      key={i}
+                                      src={photo}
+                                      alt={`${restaurant.name} photo ${i + 1}`}
+                                      className="h-16 w-16 object-cover rounded"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Opening Hours Details */}
                 {place.currentOpeningHours?.weekdayDescriptions && (

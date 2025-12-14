@@ -1,8 +1,14 @@
 .PHONY: help init up down restart logs ps clean build test lint proto migrate
 
 # Variables
-DOCKER_COMPOSE = docker-compose -f deployments/docker-compose/docker-compose.yml
-SERVICES = auth-service restaurant-service booking-service spider-service mail-service map-service api-gateway
+# Docker configuration
+DOCKER_COMPOSE_FILE := deployments/docker-compose/docker-compose.yml
+DOCKER_COMPOSE := docker-compose -f $(DOCKER_COMPOSE_FILE)
+
+# Enable BuildKit for faster builds and caching
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+SERVICES = auth-service restaurant-service map-service spider-service
 
 ## help: Show this help message
 help:
@@ -76,23 +82,32 @@ clean:
 	$(DOCKER_COMPOSE) down -v --remove-orphans
 	@echo "=> Cleanup complete"
 
+## docker-clean: Clean unused Docker resources (safe)
+docker-clean:
+	@echo "=> Cleaning Docker resources..."
+	@docker container prune -f
+	@docker image prune -f
+	@docker volume prune -f
+	@docker buildx prune --keep-storage 5GB -f 2>/dev/null || true
+	@echo "=> Docker cleanup complete"
+
+## docker-clean-all: Remove ALL unused Docker resources (WARNING: destructive)
+docker-clean-all:
+	@echo "WARNING: This will remove ALL unused Docker resources!"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [ "$$REPLY" = "y" ] || [ "$$REPLY" = "Y" ]; then \
+		docker system prune -a --volumes -f; \
+		echo "=> Complete cleanup done"; \
+	else \
+		echo "=> Cleanup cancelled"; \
+	fi
+
 ## build: Build all microservices
+.PHONY: build
 build:
 	@echo "=> Building all microservices..."
-	@for service in $(SERVICES); do \
-		echo "Building $$service..."; \
-		cd cmd/$$service && go build -o ../../bin/$$service . && cd ../..; \
-	done
-	@echo "=> Build complete"
-
-## test: Run all tests
-test:
-	@echo "=> Running tests..."
-	@for service in $(SERVICES); do \
-		echo "Testing $$service..."; \
-		cd cmd/$$service && go test ./... -v && cd ../..; \
-	done
-	@echo "=> Tests complete"
+	docker-compose -f $(DOCKER_COMPOSE_FILE) build
 
 ## lint: Run code linter
 lint:
@@ -162,12 +177,61 @@ test-integration:
 test-all: test-unit test-integration
 	@echo "=> All tests complete"
 
-## test-coverage: Run tests and generate coverage report
+##.PHONY: test
+test:
+	@echo "Running tests..."
+	go test -v -race ./...
+
+.PHONY: test-coverage
 test-coverage:
-	@echo "=> Generating test coverage report..."
-	@go test -v -coverprofile=coverage.out ./internal/auth/...
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "=> Coverage report generated: coverage.html"
+	@echo "Running tests with coverage..."
+	go test -v -race -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+
+# Mock generation
+.PHONY: generate-mocks
+generate-mocks:
+	@echo "Generating mocks..."
+	@mkdir -p internal/restaurant/mocks
+	mockgen -source=internal/restaurant/domain/repository/restaurant_repository.go \
+		-destination=internal/restaurant/mocks/mock_restaurant_repository.go \
+		-package=mocks
+	mockgen -source=internal/restaurant/domain/repository/favorite_repository.go \
+		-destination=internal/restaurant/mocks/mock_favorite_repository.go \
+		-package=mocks
+	mockgen -source=internal/restaurant/application/map_client.go \
+		-destination=internal/restaurant/mocks/mock_map_service_client.go \
+		-package=mocks
+	@echo "✅ Restaurant mocks generated"
+	@echo "Generating spider service mocks..."
+	@cd internal/spider && go generate ./domain/repositories/...
+	@echo "✅ Spider mocks generated in internal/spider/testutil/mocks/"
+	@echo "✅ All mocks generated"
+
+.PHONY: generate-spider-mocks
+generate-spider-mocks:
+	@echo "Generating spider service mocks..."
+	@cd internal/spider && go generate ./domain/repositories/...
+	@echo "✅ Spider mocks generated"
+
+.PHONY: test-with-mocks
+test-with-mocks: generate-mocks
+	@echo "Running tests with generated mocks..."
+	cd internal/restaurant/application && go test -v -cover
+
+.PHONY: clean-mocks
+clean-mocks:
+	@echo "Cleaning generated mocks..."
+	rm -rf internal/restaurant/mocks
+	@echo "✅ Mocks cleaned"
+
+.PHONY: clean
+clean: clean-mocks
+	@echo "Cleaning build artifacts..."
+	rm -f coverage.out coverage.html
+	rm -rf bin/
+	@echo "✅ Clean complete"
 
 ## auth-build: Build Auth Service Docker Image
 auth-build:

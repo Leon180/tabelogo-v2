@@ -3,6 +3,7 @@ package restaurant
 import (
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/application"
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/infrastructure"
+	restaurantgrpc "github.com/Leon180/tabelogo-v2/internal/restaurant/interfaces/grpc"
 	restauranthttp "github.com/Leon180/tabelogo-v2/internal/restaurant/interfaces/http"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/Leon180/tabelogo-v2/pkg/logger"
@@ -15,5 +16,6 @@ var Module = fx.Module("restaurant",
 	logger.Module,
 	infrastructure.Module,
 	application.Module,
+	restaurantgrpc.Module,
 	restauranthttp.Module,
 )

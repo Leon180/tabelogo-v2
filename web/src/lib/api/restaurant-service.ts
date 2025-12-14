@@ -1,61 +1,154 @@
-import axios from 'axios';
-import type { Restaurant, UserFavorite } from '@/types/restaurant';
+import axios, { AxiosError } from 'axios';
 
-const RESTAURANT_SERVICE_URL = process.env.NEXT_PUBLIC_RESTAURANT_SERVICE_URL || 'http://localhost:8082';
+// ============================================
+// Types
+// ============================================
 
+export interface Restaurant {
+    id: string;
+    name: string;
+    name_ja?: string;
+    area?: string;
+    source: string;
+    external_id: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    rating: number;
+    price_range: string;
+    cuisine_type: string;
+    phone: string;
+    website: string;
+    view_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface RestaurantResponse {
+    restaurant: Restaurant;
+}
+
+export interface ErrorResponse {
+    error: string;
+    message: string;
+}
+
+// ============================================
+// Configuration
+// ============================================
+
+const RESTAURANT_SERVICE_URL = process.env.NEXT_PUBLIC_RESTAURANT_SERVICE_URL || 'http://localhost:18082';
+
+// Create axios instance
 const restaurantClient = axios.create({
     baseURL: RESTAURANT_SERVICE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 10000,
 });
 
-// Add token to requests
-restaurantClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+// Response interceptor for error handling
+restaurantClient.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError<ErrorResponse>) => {
+        if (error.response) {
+            const { status, data } = error.response;
+
+            if (status === 404) {
+                console.warn('Restaurant not found:', data);
+                throw new NotFoundError(data.message);
+            } else if (status === 400) {
+                console.error('Invalid request:', data);
+                throw new ValidationError(data.message);
+            } else if (status >= 500) {
+                console.error('Server error:', data);
+                throw new ServerError(data.message);
+            }
+        } else if (error.request) {
+            console.error('Network error:', error.message);
+            throw new NetworkError('Unable to connect to Restaurant Service');
+        }
+
+        throw error;
     }
-    return config;
-});
+);
+
+// ============================================
+// Custom Error Classes
+// ============================================
+
+export class NotFoundError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'NotFoundError';
+    }
+}
+
+export class ValidationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'ValidationError';
+    }
+}
+
+export class ServerError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'ServerError';
+    }
+}
+
+export class NetworkError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'NetworkError';
+    }
+}
+
+// ============================================
+// API Functions
+// ============================================
 
 /**
- * Get restaurant by ID
+ * Quick Search by Place ID - Get restaurant details with cache-first strategy
+ * 
+ * Benefits:
+ * - 80% cost reduction (cached responses)
+ * - Faster response times (<50ms for cache hits)
+ * - Automatic fallback to Map Service if needed
+ * 
+ * @param placeId - Google Place ID
+ * @returns Restaurant details with cache metadata
  */
-export async function getRestaurant(id: string): Promise<Restaurant> {
-    const response = await restaurantClient.get(`/restaurants/${id}`);
+export async function quickSearchByPlaceId(placeId: string): Promise<RestaurantResponse> {
+    const response = await restaurantClient.get<RestaurantResponse>(`/api/v1/restaurants/quick-search/${placeId}`);
     return response.data;
 }
 
 /**
- * Get user's favorite restaurants
+ * Update restaurant details
+ * @param id - Restaurant ID
+ * @param data - Update data (currently supports name_ja)
  */
-export async function getFavorites(): Promise<UserFavorite[]> {
-    const response = await restaurantClient.get('/favorites');
+export async function updateRestaurant(
+    id: string,
+    data: { name_ja?: string }
+): Promise<RestaurantResponse> {
+    const response = await restaurantClient.patch<RestaurantResponse>(
+        `/api/v1/restaurants/${id}`,
+        data
+    );
     return response.data;
 }
 
-/**
- * Add restaurant to favorites
- */
-export async function addFavorite(restaurantId: string, notes?: string): Promise<UserFavorite> {
-    const response = await restaurantClient.post('/favorites', {
-        restaurant_id: restaurantId,
-        notes,
-    });
-    return response.data;
-}
-
-/**
- * Remove restaurant from favorites
- */
-export async function removeFavorite(favoriteId: string): Promise<void> {
-    await restaurantClient.delete(`/favorites/${favoriteId}`);
-}
+// ============================================
+// Exported Service Object
+// ============================================
 
 export const restaurantService = {
-    getRestaurant,
-    getFavorites,
-    addFavorite,
-    removeFavorite,
+    quickSearchByPlaceId,
+    updateRestaurant,
 };
+
+export default restaurantService;

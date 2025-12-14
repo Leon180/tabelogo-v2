@@ -63,6 +63,7 @@ export interface SearchMetadata {
 export interface Place {
     id: string;
     displayName?: DisplayName;
+    area?: string;
     formattedAddress?: string;
     location?: Location;
     rating?: number;
@@ -74,6 +75,12 @@ export interface Place {
     photos?: Photo[];
     reviews?: Review[];
     types?: string[];
+    // Google Maps addressComponents for extracting area information
+    addressComponents?: Array<{
+        longText?: string;
+        shortText?: string;
+        types: string[];
+    }>;
     nationalPhoneNumber?: string;
     internationalPhoneNumber?: string;
     googleMapsUri?: string;

@@ -1,0 +1,747 @@
+basePath: /api/v1
+definitions:
+  github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      error:
+        type: string
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  http.AddFavoriteRequest:
+    properties:
+      restaurant_id:
+        type: string
+      user_id:
+        type: string
+    required:
+    - restaurant_id
+    - user_id
+    type: object
+  http.AdvanceSearchRequest:
+    properties:
+      api_mask:
+        type: string
+      language_code:
+        enum:
+        - en
+        - ja
+        - zh-TW
+        type: string
+      location_bias:
+        $ref: '#/definitions/http.LocationBias'
+      max_result_count:
+        maximum: 20
+        minimum: 1
+        type: integer
+      min_rating:
+        maximum: 5
+        minimum: 0
+        type: number
+      open_now:
+        type: boolean
+      rank_preference:
+        enum:
+        - DISTANCE
+        - RELEVANCE
+        type: string
+      text_query:
+        type: string
+    required:
+    - language_code
+    - location_bias
+    - max_result_count
+    - rank_preference
+    - text_query
+    type: object
+  http.AdvanceSearchResponse:
+    properties:
+      places:
+        items: {}
+        type: array
+      search_metadata:
+        $ref: '#/definitions/http.SearchMetadata'
+      total_count:
+        type: integer
+    type: object
+  http.Coordinates:
+    properties:
+      latitude:
+        maximum: 90
+        minimum: -90
+        type: number
+      longitude:
+        maximum: 180
+        minimum: -180
+        type: number
+    required:
+    - latitude
+    - longitude
+    type: object
+  http.CreateRestaurantRequest:
+    properties:
+      address:
+        type: string
+      cuisine_type:
+        type: string
+      external_id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone:
+        type: string
+      price_range:
+        type: string
+      rating:
+        type: number
+      source:
+        $ref: '#/definitions/model.RestaurantSource'
+      website:
+        type: string
+    required:
+    - external_id
+    - latitude
+    - longitude
+    - name
+    - source
+    type: object
+  http.FavoriteDTO:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      last_visited_at:
+        type: string
+      notes:
+        type: string
+      restaurant_id:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      user_id:
+        type: string
+      visit_count:
+        type: integer
+    type: object
+  http.FavoriteListResponse:
+    properties:
+      favorites:
+        items:
+          $ref: '#/definitions/http.FavoriteDTO'
+        type: array
+      total:
+        type: integer
+    type: object
+  http.FavoriteResponse:
+    properties:
+      favorite:
+        $ref: '#/definitions/http.FavoriteDTO'
+    type: object
+  http.HealthCheckResponse:
+    properties:
+      dependencies:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+      version:
+        type: string
+    type: object
+  http.LocationBias:
+    properties:
+      rectangle:
+        $ref: '#/definitions/http.Rectangle'
+    required:
+    - rectangle
+    type: object
+  http.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  http.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/http.UserResponse'
+    type: object
+  http.QuickSearchRequest:
+    properties:
+      api_mask:
+        type: string
+      language_code:
+        enum:
+        - en
+        - ja
+        - zh-TW
+        type: string
+      place_id:
+        type: string
+    required:
+    - language_code
+    - place_id
+    type: object
+  http.QuickSearchResponse:
+    properties:
+      cached_at:
+        type: string
+      result: {}
+      source:
+        type: string
+    type: object
+  http.Rectangle:
+    properties:
+      high:
+        $ref: '#/definitions/http.Coordinates'
+      low:
+        $ref: '#/definitions/http.Coordinates'
+    required:
+    - high
+    - low
+    type: object
+  http.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  http.RefreshTokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  http.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      username:
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  http.RegisterResponse:
+    properties:
+      user:
+        $ref: '#/definitions/http.UserResponse'
+    type: object
+  http.RestaurantDTO:
+    properties:
+      address:
+        type: string
+      created_at:
+        type: string
+      cuisine_type:
+        type: string
+      external_id:
+        type: string
+      id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone:
+        type: string
+      price_range:
+        type: string
+      rating:
+        type: number
+      source:
+        type: string
+      updated_at:
+        type: string
+      view_count:
+        type: integer
+      website:
+        type: string
+    type: object
+  http.RestaurantListResponse:
+    properties:
+      restaurants:
+        items:
+          $ref: '#/definitions/http.RestaurantDTO'
+        type: array
+      total:
+        type: integer
+    type: object
+  http.RestaurantResponse:
+    properties:
+      restaurant:
+        $ref: '#/definitions/http.RestaurantDTO'
+    type: object
+  http.SearchMetadata:
+    properties:
+      search_time_ms:
+        type: integer
+      text_query:
+        type: string
+    type: object
+  http.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      id:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  http.ValidateTokenResponse:
+    properties:
+      user:
+        $ref: '#/definitions/http.UserResponse'
+      valid:
+        type: boolean
+    type: object
+  model.RestaurantSource:
+    enum:
+    - tabelog
+    - google
+    - opentable
+    type: string
+    x-enum-varnames:
+    - SourceTabelog
+    - SourceGoogle
+    - SourceOpenTable
+host: localhost:18082
+info:
+  contact:
+    email: support@tabelogo.com
+    name: API Support
+  description: Restaurant management service for Tabelogo platform
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Restaurant Service API
+  version: "1.0"
+paths:
+  /api/v1/map/advance_search:
+    post:
+      consumes:
+      - application/json
+      description: Search for places using text query and filters
+      parameters:
+      - description: Advance search request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.AdvanceSearchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.AdvanceSearchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse'
+      summary: Advance search for places
+      tags:
+      - map
+  /api/v1/map/quick_search:
+    post:
+      consumes:
+      - application/json
+      description: Get place details by place ID
+      parameters:
+      - description: Quick search request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.QuickSearchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.QuickSearchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_map_interfaces_http.ErrorResponse'
+      summary: Quick search for a place
+      tags:
+      - map
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with email and password
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse'
+      summary: Login user
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access token using refresh token
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.RefreshTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with email and password
+      parameters:
+      - description: Register request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.RegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /auth/validate:
+    get:
+      description: Validate an access token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ValidateTokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_auth_interfaces_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Validate access token
+      tags:
+      - auth
+  /favorites:
+    post:
+      consumes:
+      - application/json
+      description: Add a restaurant to user's favorites
+      parameters:
+      - description: Add favorite request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.AddFavoriteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.FavoriteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+      summary: Add restaurant to favorites
+      tags:
+      - favorites
+  /health:
+    get:
+      description: Check if the service is healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.HealthCheckResponse'
+      summary: Health check
+      tags:
+      - health
+  /restaurants:
+    post:
+      consumes:
+      - application/json
+      description: Create a new restaurant with details
+      parameters:
+      - description: Create restaurant request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.CreateRestaurantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.RestaurantResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+      summary: Create a new restaurant
+      tags:
+      - restaurants
+  /restaurants/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get restaurant details by ID
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.RestaurantResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+      summary: Get a restaurant by ID
+      tags:
+      - restaurants
+  /restaurants/quick-search/{place_id}:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Search for a restaurant using Google Place ID with cache-first strategy.
+        This endpoint implements a cache-first approach:
+        - Returns cached data if fresh (< 3 days old)
+        - Falls back to Map Service if cache miss or stale
+        - Returns stale data if Map Service fails (graceful degradation)
+        Response headers indicate cache status and data source.
+      parameters:
+      - description: Google Place ID
+        example: '"ChIJN1t_tDeuEmsRUsoyG83frY4"'
+        in: path
+        name: place_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Restaurant found" headers(X-Cache-Status=string,X-Data-Source=string,X-Data-Age=string)
+          schema:
+            $ref: '#/definitions/http.RestaurantResponse'
+        "400":
+          description: Invalid place ID
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+        "404":
+          description: Restaurant not found
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+        "503":
+          description: Map Service unavailable and no cached data
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+      summary: Quick search restaurant by Google Place ID
+      tags:
+      - restaurants
+  /restaurants/search:
+    get:
+      consumes:
+      - application/json
+      description: Search restaurants by query string
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.RestaurantListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+      summary: Search restaurants
+      tags:
+      - restaurants
+  /users/{userId}/favorites:
+    get:
+      consumes:
+      - application/json
+      description: Get all favorites for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.FavoriteListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Leon180_tabelogo-v2_internal_restaurant_interfaces_http.ErrorResponse'
+      summary: Get user favorites
+      tags:
+      - favorites
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

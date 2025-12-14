@@ -26,6 +26,16 @@ type Config struct {
 
 	// JWT configuration
 	JWT JWTConfig
+
+	// Map Service integration (for Restaurant Service)
+	MapService MapServiceConfig
+}
+
+// MapServiceConfig holds Map Service integration configuration
+type MapServiceConfig struct {
+	GRPCAddr         string        `env:"MAP_SERVICE_GRPC_ADDR" envDefault:"map-service:19083"`
+	Timeout          time.Duration `env:"MAP_SERVICE_TIMEOUT" envDefault:"10s"`
+	DataFreshnessTTL time.Duration `env:"DATA_FRESHNESS_TTL" envDefault:"259200s"` // 3 days
 }
 
 // DatabaseConfig holds database configuration
@@ -110,6 +120,13 @@ func LoadWithPrefix(prefix string) (*Config, error) {
 		Secret:             getEnvWithDefault(buildEnvKey(prefix, "JWT_SECRET"), "change-me-in-production"),
 		AccessTokenExpire:  getEnvAsDuration(buildEnvKey(prefix, "JWT_ACCESS_TOKEN_EXPIRE"), 15*time.Minute),
 		RefreshTokenExpire: getEnvAsDuration(buildEnvKey(prefix, "JWT_REFRESH_TOKEN_EXPIRE"), 7*24*time.Hour),
+	}
+
+	// Load Map Service config (for Restaurant Service)
+	cfg.MapService = MapServiceConfig{
+		GRPCAddr:         getEnvWithDefault(buildEnvKey(prefix, "MAP_SERVICE_GRPC_ADDR"), "map-service:19083"),
+		Timeout:          getEnvAsDuration(buildEnvKey(prefix, "MAP_SERVICE_TIMEOUT"), 10*time.Second),
+		DataFreshnessTTL: getEnvAsDuration(buildEnvKey(prefix, "DATA_FRESHNESS_TTL"), 259200*time.Second), // 3 days
 	}
 
 	// Validate required fields

@@ -15,6 +15,7 @@ func TestNewRestaurant(t *testing.T) {
 
 	restaurant := NewRestaurant(
 		"Sushi Dai",
+		"",
 		SourceGoogle,
 		"ChIJTest123",
 		"Tokyo, Chuo-ku",
@@ -210,6 +211,8 @@ func TestReconstructRestaurant(t *testing.T) {
 	restaurant := ReconstructRestaurant(
 		id,
 		"Test Restaurant",
+		"Test Restaurant",
+		"Test Restaurant",
 		SourceTabelog,
 		"external123",
 		"Test Address",
@@ -254,6 +257,7 @@ func createTestRestaurant(t *testing.T) *Restaurant {
 
 	return NewRestaurant(
 		"Test Restaurant",
+		"Test Area",
 		SourceGoogle,
 		"test-external-id",
 		"Test Address",

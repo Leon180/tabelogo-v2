@@ -9,17 +9,23 @@ import (
 // Request DTOs
 
 type CreateRestaurantRequest struct {
-	Name        string                   `json:"name" binding:"required"`
-	Source      model.RestaurantSource   `json:"source" binding:"required"`
-	ExternalID  string                   `json:"external_id" binding:"required"`
-	Address     string                   `json:"address"`
-	Latitude    float64                  `json:"latitude" binding:"required"`
-	Longitude   float64                  `json:"longitude" binding:"required"`
-	Rating      float64                  `json:"rating"`
-	PriceRange  string                   `json:"price_range"`
-	CuisineType string                   `json:"cuisine_type"`
-	Phone       string                   `json:"phone"`
-	Website     string                   `json:"website"`
+	Name        string                 `json:"name" binding:"required"`
+	NameJa      string                 `json:"name_ja"`
+	Source      model.RestaurantSource `json:"source" binding:"required"`
+	ExternalID  string                 `json:"external_id" binding:"required"`
+	Address     string                 `json:"address"`
+	Latitude    float64                `json:"latitude" binding:"required"`
+	Longitude   float64                `json:"longitude" binding:"required"`
+	Rating      float64                `json:"rating"`
+	PriceRange  string                 `json:"price_range"`
+	CuisineType string                 `json:"cuisine_type"`
+	Phone       string                 `json:"phone"`
+	Website     string                 `json:"website"`
+}
+
+// UpdateRestaurantRequest represents the HTTP request to update a restaurant
+type UpdateRestaurantRequest struct {
+	NameJa string `json:"name_ja"`
 }
 
 type AddFavoriteRequest struct {
@@ -35,21 +41,25 @@ type ErrorResponse struct {
 }
 
 type RestaurantDTO struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Source      string                 `json:"source"`
-	ExternalID  string                 `json:"external_id"`
-	Address     string                 `json:"address"`
-	Latitude    float64                `json:"latitude"`
-	Longitude   float64                `json:"longitude"`
-	Rating      float64                `json:"rating"`
-	PriceRange  string                 `json:"price_range"`
-	CuisineType string                 `json:"cuisine_type"`
-	Phone       string                 `json:"phone"`
-	Website     string                 `json:"website"`
-	ViewCount   int64                  `json:"view_count"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	NameJa       string                 `json:"name_ja,omitempty"`
+	Area         string                 `json:"area,omitempty"`
+	Source       string                 `json:"source"`
+	ExternalID   string                 `json:"external_id"`
+	Address      string                 `json:"address"`
+	Latitude     float64                `json:"latitude"`
+	Longitude    float64                `json:"longitude"`
+	Rating       float64                `json:"rating"`
+	PriceRange   string                 `json:"price_range"`
+	CuisineType  string                 `json:"cuisine_type"`
+	Phone        string                 `json:"phone"`
+	Website      string                 `json:"website"`
+	OpeningHours map[string]string      `json:"opening_hours,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	ViewCount    int64                  `json:"view_count"`
+	CreatedAt    time.Time              `json:"created_at"`
+	UpdatedAt    time.Time              `json:"updated_at"`
 }
 
 type RestaurantResponse struct {
@@ -84,28 +94,33 @@ type FavoriteListResponse struct {
 // Mapper functions
 
 func toRestaurantDTO(r *model.Restaurant) RestaurantDTO {
-	dto := RestaurantDTO{
-		ID:          r.ID().String(),
-		Name:        r.Name(),
-		Source:      string(r.Source()),
-		ExternalID:  r.ExternalID(),
-		Address:     r.Address(),
-		Rating:      r.Rating(),
-		PriceRange:  r.PriceRange(),
-		CuisineType: r.CuisineType(),
-		Phone:       r.Phone(),
-		Website:     r.Website(),
-		ViewCount:   r.ViewCount(),
-		CreatedAt:   r.CreatedAt(),
-		UpdatedAt:   r.UpdatedAt(),
-	}
-
+	var lat, lng float64
 	if r.Location() != nil {
-		dto.Latitude = r.Location().Latitude()
-		dto.Longitude = r.Location().Longitude()
+		lat = r.Location().Latitude()
+		lng = r.Location().Longitude()
 	}
 
-	return dto
+	return RestaurantDTO{
+		ID:           r.ID().String(),
+		Name:         r.Name(),
+		NameJa:       r.NameJa(),
+		Area:         r.Area(),
+		Source:       string(r.Source()),
+		ExternalID:   r.ExternalID(),
+		Address:      r.Address(),
+		Latitude:     lat,
+		Longitude:    lng,
+		Rating:       r.Rating(),
+		PriceRange:   r.PriceRange(),
+		CuisineType:  r.CuisineType(),
+		Phone:        r.Phone(),
+		Website:      r.Website(),
+		OpeningHours: r.OpeningHours(),
+		Metadata:     r.Metadata(),
+		ViewCount:    r.ViewCount(),
+		CreatedAt:    r.CreatedAt(),
+		UpdatedAt:    r.UpdatedAt(),
+	}
 }
 
 func toRestaurantDTOList(restaurants []*model.Restaurant) []RestaurantDTO {

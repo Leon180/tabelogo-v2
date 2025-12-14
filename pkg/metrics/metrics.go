@@ -73,4 +73,44 @@ var (
 			Help: "Number of active requests",
 		},
 	)
+
+	// Restaurant Service - Cache Metrics
+	RestaurantCacheHitsTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "restaurant_cache_hits_total",
+			Help: "Total number of cache hits for restaurant queries",
+		},
+	)
+
+	RestaurantCacheMissesTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "restaurant_cache_misses_total",
+			Help: "Total number of cache misses for restaurant queries",
+		},
+	)
+
+	// Restaurant Service - Map Service Integration Metrics
+	RestaurantMapServiceCallsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "restaurant_map_service_calls_total",
+			Help: "Total number of Map Service calls from Restaurant Service",
+		},
+		[]string{"status"}, // status: success, error
+	)
+
+	RestaurantSyncDuration = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "restaurant_sync_duration_seconds",
+			Help:    "Duration of restaurant data sync from Map Service",
+			Buckets: []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10}, // Match Google API buckets
+		},
+	)
+
+	// Restaurant Service - Fallback Metrics
+	RestaurantStaleDataReturnsTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "restaurant_stale_data_returns_total",
+			Help: "Total number of times stale data was returned due to Map Service failure",
+		},
+	)
 )

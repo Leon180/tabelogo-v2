@@ -36,7 +36,7 @@ func NewMapHandler(
 // @Description Check if the service is healthy
 // @Tags health
 // @Produce json
-// @Success 200 {object} models.HealthCheckResponse
+// @Success 200 {object} HealthCheckResponse
 // @Router /health [get]
 func (h *MapHandler) HealthCheck(c *gin.Context) {
 	response := models.HealthCheckResponse{
@@ -56,10 +56,10 @@ func (h *MapHandler) HealthCheck(c *gin.Context) {
 // @Tags map
 // @Accept json
 // @Produce json
-// @Param request body models.QuickSearchRequest true "Quick search request"
-// @Success 200 {object} models.QuickSearchResponse
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
+// @Param request body QuickSearchRequest true "Quick search request"
+// @Success 200 {object} QuickSearchResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/map/quick_search [post]
 func (h *MapHandler) QuickSearch(c *gin.Context) {
 	// 1. Bind and validate request
@@ -112,10 +112,10 @@ func (h *MapHandler) QuickSearch(c *gin.Context) {
 // @Tags map
 // @Accept json
 // @Produce json
-// @Param request body models.AdvanceSearchRequest true "Advance search request"
-// @Success 200 {object} models.AdvanceSearchResponse
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
+// @Param request body AdvanceSearchRequest true "Advance search request"
+// @Success 200 {object} AdvanceSearchResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/map/advance_search [post]
 func (h *MapHandler) AdvanceSearch(c *gin.Context) {
 	// 1. Bind and validate request

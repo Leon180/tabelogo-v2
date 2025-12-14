@@ -6,11 +6,14 @@ import (
 	"net/http"
 	"time"
 
+	_ "github.com/Leon180/tabelogo-v2/internal/map/docs"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/Leon180/tabelogo-v2/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/ulule/limiter/v3"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -48,7 +51,7 @@ func NewHTTPServer() *gin.Engine {
 	})
 
 	// Metrics middleware
-	router.Use(middleware.MetricsMiddleware())
+	router.Use(MetricsMiddleware())
 
 	return router
 }
@@ -67,6 +70,10 @@ func RegisterRoutes(
 
 	// Prometheus metrics endpoint
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Swagger documentation
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/map-service/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Create rate limiters
 	quickSearchLimiter := middleware.NewRateLimiter(redisClient, middleware.RateLimiterConfig{

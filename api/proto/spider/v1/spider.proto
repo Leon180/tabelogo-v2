@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package spider.v1;
+
+option go_package = "github.com/Leon180/tabelogo-v2/api/gen/spider/v1;spiderv1";
+
+// SpiderService provides Tabelog scraping and search functionality
+service SpiderService {
+  // SearchSimilarRestaurants searches Tabelog for similar restaurants
+  // Returns top 10 similar restaurants based on place name and area
+  rpc SearchSimilarRestaurants(SearchSimilarRestaurantsRequest) returns (SearchSimilarRestaurantsResponse);
+  
+  // GetRestaurantPhotos retrieves photos from a Tabelog restaurant page
+  rpc GetRestaurantPhotos(GetRestaurantPhotosRequest) returns (GetRestaurantPhotosResponse);
+}
+
+// SearchSimilarRestaurantsRequest contains search parameters
+message SearchSimilarRestaurantsRequest {
+  string google_id = 1;   // Google Place ID for tracking/logging
+  string area = 2;        // Area to search (e.g., "tokyo", "osaka")
+  string place_name = 3;  // Restaurant name to search for
+  string place_name_ja = 4;  // Japanese name for better search accuracy
+  int32 max_results = 5;  // Maximum number of results (default: 10, max: 20)
+}
+
+// SearchSimilarRestaurantsResponse contains search results
+message SearchSimilarRestaurantsResponse {
+  string google_id = 1;
+  repeated TabelogRestaurant restaurants = 2;
+  int32 total_found = 3;  // Total number of results found
+}
+
+// GetRestaurantPhotosRequest contains photo request parameters
+message GetRestaurantPhotosRequest {
+  string google_id = 1;
+  string tabelog_link = 2;  // Tabelog restaurant URL
+  string name = 3;          // Restaurant name
+}
+
+// GetRestaurantPhotosResponse contains photo URLs
+message GetRestaurantPhotosResponse {
+  string google_id = 1;
+  string link = 2;
+  string name = 3;
+  repeated string photos = 4;
+}
+
+// TabelogRestaurant represents a restaurant from Tabelog
+message TabelogRestaurant {
+  string link = 1;          // Tabelog URL
+  string name = 2;          // Restaurant name
+  double rating = 3;        // Tabelog rating (e.g., 3.58)
+  int32 rating_count = 4;   // Number of ratings
+  int32 bookmarks = 5;      // Number of bookmarks
+  string phone = 6;         // Phone number
+  repeated string types = 7; // Restaurant types (e.g., ["ラーメン", "つけ麺"])
+}

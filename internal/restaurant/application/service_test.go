@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	mapv1 "github.com/Leon180/tabelogo-v2/api/gen/map/v1"
 	domainerrors "github.com/Leon180/tabelogo-v2/internal/restaurant/domain/errors"
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/domain/model"
 	"github.com/google/uuid"
@@ -164,12 +165,27 @@ func (m *MockFavoriteRepository) FindByTag(ctx context.Context, userID uuid.UUID
 	return args.Get(0).([]*model.Favorite), args.Error(1)
 }
 
+// MockMapServiceClient is a mock implementation of MapServiceClient
+type MockMapServiceClient struct {
+	mock.Mock
+}
+
+func (m *MockMapServiceClient) QuickSearch(ctx context.Context, placeID string) (*mapv1.Place, error) {
+	args := m.Called(ctx, placeID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*mapv1.Place), args.Error(1)
+}
+
 // Test CreateRestaurant
 func TestRestaurantService_CreateRestaurant_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	req := CreateRestaurantRequest{
@@ -204,7 +220,9 @@ func TestRestaurantService_CreateRestaurant_DuplicateError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	req := CreateRestaurantRequest{
@@ -217,7 +235,7 @@ func TestRestaurantService_CreateRestaurant_DuplicateError(t *testing.T) {
 	}
 
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	existingRestaurant := model.NewRestaurant("Existing", model.SourceGoogle, "ChIJTest123", "Tokyo", location)
+	existingRestaurant := model.NewRestaurant("Existing", "Existing", model.SourceGoogle, "ChIJTest123", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByExternalID", ctx, model.SourceGoogle, "ChIJTest123").
 		Return(existingRestaurant, nil)
@@ -234,7 +252,9 @@ func TestRestaurantService_CreateRestaurant_InvalidLocation(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	req := CreateRestaurantRequest{
@@ -261,12 +281,14 @@ func TestRestaurantService_GetRestaurant_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	expectedRestaurant := model.NewRestaurant("Sushi Dai", model.SourceGoogle, "test", "Tokyo", location)
+	expectedRestaurant := model.NewRestaurant("Sushi Dai", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).
 		Return(expectedRestaurant, nil)
@@ -283,7 +305,9 @@ func TestRestaurantService_GetRestaurant_NotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
@@ -304,13 +328,15 @@ func TestRestaurantService_AddToFavorites_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
 	mockFavoriteRepo.On("Exists", ctx, userID, restaurantID).Return(false, nil)
@@ -330,13 +356,15 @@ func TestRestaurantService_AddToFavorites_AlreadyExists(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
 	mockFavoriteRepo.On("Exists", ctx, userID, restaurantID).Return(true, nil)
@@ -354,7 +382,9 @@ func TestRestaurantService_AddToFavorites_RestaurantNotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -376,12 +406,14 @@ func TestRestaurantService_SearchRestaurants_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant1 := model.NewRestaurant("Sushi Dai", model.SourceGoogle, "test1", "Tokyo", location)
-	restaurant2 := model.NewRestaurant("Sushi Saito", model.SourceTabelog, "test2", "Tokyo", location)
+	restaurant1 := model.NewRestaurant("Sushi Dai", "Tokyo", model.SourceGoogle, "test1", "Tokyo", location)
+	restaurant2 := model.NewRestaurant("Sushi Saito", "Tokyo", model.SourceTabelog, "test2", "Tokyo", location)
 	expectedRestaurants := []*model.Restaurant{restaurant1, restaurant2}
 
 	mockRestaurantRepo.On("Search", ctx, "sushi", 20, 0).
@@ -401,7 +433,9 @@ func TestRestaurantService_IsFavorite(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -421,11 +455,13 @@ func TestRestaurantService_GetRestaurantByExternalID_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	expectedRestaurant := model.NewRestaurant("Sushi Dai", model.SourceGoogle, "ChIJTest123", "Tokyo", location)
+	expectedRestaurant := model.NewRestaurant("Sushi Dai", "Tokyo", model.SourceGoogle, "ChIJTest123", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByExternalID", ctx, model.SourceGoogle, "ChIJTest123").
 		Return(expectedRestaurant, nil)
@@ -443,7 +479,9 @@ func TestRestaurantService_GetRestaurantByExternalID_NotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 
@@ -463,12 +501,14 @@ func TestRestaurantService_UpdateRestaurant_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	existingRestaurant := model.NewRestaurant("Old Name", model.SourceGoogle, "test", "Old Address", location)
+	existingRestaurant := model.NewRestaurant("Old Name", "Old Area", model.SourceGoogle, "test", "Old Address", location)
 
 	req := UpdateRestaurantRequest{
 		Name:        "New Name",
@@ -499,7 +539,9 @@ func TestRestaurantService_UpdateRestaurant_NotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
@@ -520,12 +562,14 @@ func TestRestaurantService_UpdateRestaurant_InvalidLocation(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	existingRestaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	existingRestaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	req := UpdateRestaurantRequest{
 		Latitude:  999.0, // Invalid
@@ -547,7 +591,9 @@ func TestRestaurantService_DeleteRestaurant_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
@@ -564,7 +610,9 @@ func TestRestaurantService_DeleteRestaurant_NotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
@@ -584,12 +632,14 @@ func TestRestaurantService_ListRestaurants_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant1 := model.NewRestaurant("Restaurant 1", model.SourceGoogle, "test1", "Tokyo", location)
-	restaurant2 := model.NewRestaurant("Restaurant 2", model.SourceTabelog, "test2", "Osaka", location)
+	restaurant1 := model.NewRestaurant("Restaurant 1", "Tokyo", model.SourceGoogle, "test1", "Tokyo", location)
+	restaurant2 := model.NewRestaurant("Restaurant 2", "Osaka", model.SourceTabelog, "test2", "Osaka", location)
 	expectedRestaurants := []*model.Restaurant{restaurant1, restaurant2}
 
 	mockRestaurantRepo.On("List", ctx, 20, 0).Return(expectedRestaurants, nil)
@@ -608,11 +658,13 @@ func TestRestaurantService_FindRestaurantsByLocation_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	location1, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant1 := model.NewRestaurant("Nearby Restaurant", model.SourceGoogle, "test1", "Tokyo", location1)
+	restaurant1 := model.NewRestaurant("Nearby Restaurant", "Tokyo", model.SourceGoogle, "test1", "Tokyo", location1)
 	expectedRestaurants := []*model.Restaurant{restaurant1}
 
 	mockRestaurantRepo.On("FindByLocation", ctx, 35.6762, 139.6503, 5.0, 10).
@@ -631,11 +683,13 @@ func TestRestaurantService_FindRestaurantsByCuisineType_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant1 := model.NewRestaurant("Sushi Place", model.SourceGoogle, "test1", "Tokyo", location)
+	restaurant1 := model.NewRestaurant("Sushi Place", "Tokyo", model.SourceGoogle, "test1", "Tokyo", location)
 	restaurant1.UpdateDetails("", "", "", "Japanese", "", "")
 	expectedRestaurants := []*model.Restaurant{restaurant1}
 
@@ -655,12 +709,14 @@ func TestRestaurantService_IncrementRestaurantViewCount_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
 	mockRestaurantRepo.On("Update", ctx, mock.AnythingOfType("*model.Restaurant")).Return(nil)
@@ -676,7 +732,9 @@ func TestRestaurantService_IncrementRestaurantViewCount_NotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
@@ -696,7 +754,9 @@ func TestRestaurantService_RemoveFromFavorites_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -718,7 +778,9 @@ func TestRestaurantService_RemoveFromFavorites_NotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -739,7 +801,9 @@ func TestRestaurantService_GetUserFavorites_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -763,7 +827,9 @@ func TestRestaurantService_GetFavoriteByUserAndRestaurant_Success(t *testing.T) 
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -787,7 +853,9 @@ func TestRestaurantService_UpdateFavoriteNotes_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -809,7 +877,9 @@ func TestRestaurantService_UpdateFavoriteNotes_NotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -831,7 +901,9 @@ func TestRestaurantService_AddFavoriteTag_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -854,7 +926,9 @@ func TestRestaurantService_RemoveFavoriteTag_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -880,7 +954,9 @@ func TestRestaurantService_AddFavoriteVisit_Success(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -903,7 +979,9 @@ func TestRestaurantService_AddFavoriteVisit_NotFound(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -926,7 +1004,9 @@ func TestRestaurantService_SearchRestaurants_Error(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	expectedErr := assert.AnError
@@ -944,7 +1024,9 @@ func TestRestaurantService_ListRestaurants_Error(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	expectedErr := assert.AnError
@@ -962,7 +1044,9 @@ func TestRestaurantService_FindRestaurantsByLocation_Error(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	expectedErr := assert.AnError
@@ -981,7 +1065,9 @@ func TestRestaurantService_FindRestaurantsByCuisineType_Error(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	expectedErr := assert.AnError
@@ -1000,7 +1086,9 @@ func TestRestaurantService_GetUserFavorites_Error(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -1019,13 +1107,15 @@ func TestRestaurantService_AddToFavorites_ExistsError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 	expectedErr := assert.AnError
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
@@ -1043,13 +1133,15 @@ func TestRestaurantService_AddToFavorites_CreateError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 	expectedErr := assert.AnError
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
@@ -1068,7 +1160,9 @@ func TestRestaurantService_RemoveFromFavorites_DeleteError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -1091,7 +1185,9 @@ func TestRestaurantService_UpdateFavoriteNotes_UpdateError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -1113,7 +1209,9 @@ func TestRestaurantService_AddFavoriteTag_UpdateError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -1135,7 +1233,9 @@ func TestRestaurantService_RemoveFavoriteTag_UpdateError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -1158,7 +1258,9 @@ func TestRestaurantService_AddFavoriteVisit_UpdateError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -1180,7 +1282,9 @@ func TestRestaurantService_IsFavorite_Error(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -1200,7 +1304,9 @@ func TestRestaurantService_CreateRestaurant_CreateError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	req := CreateRestaurantRequest{
@@ -1229,12 +1335,14 @@ func TestRestaurantService_UpdateRestaurant_UpdateError(t *testing.T) {
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	existingRestaurant := model.NewRestaurant("Old Name", model.SourceGoogle, "test", "Old Address", location)
+	existingRestaurant := model.NewRestaurant("Old Name", "Old Area", model.SourceGoogle, "test", "Old Address", location)
 	req := UpdateRestaurantRequest{Name: "New Name"}
 	expectedErr := assert.AnError
 
@@ -1252,12 +1360,14 @@ func TestRestaurantService_IncrementRestaurantViewCount_UpdateError(t *testing.T
 	mockRestaurantRepo := new(MockRestaurantRepository)
 	mockFavoriteRepo := new(MockFavoriteRepository)
 	logger := zap.NewNop()
-	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, logger)
+	mockMapClient := new(MockMapServiceClient)
+	config := &Config{DataFreshnessTTL: 3 * 24 * time.Hour}
+	service := NewRestaurantService(mockRestaurantRepo, mockFavoriteRepo, mockMapClient, config, logger)
 
 	ctx := context.Background()
 	restaurantID := uuid.New()
 	location, _ := model.NewLocation(35.6762, 139.6503)
-	restaurant := model.NewRestaurant("Test", model.SourceGoogle, "test", "Tokyo", location)
+	restaurant := model.NewRestaurant("Test", "Tokyo", model.SourceGoogle, "test", "Tokyo", location)
 	expectedErr := assert.AnError
 
 	mockRestaurantRepo.On("FindByID", ctx, restaurantID).Return(restaurant, nil)
