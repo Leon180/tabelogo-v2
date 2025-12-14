@@ -7,22 +7,23 @@ import (
 	"time"
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
-	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
 	redisclient "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
 // RedisResultCache implements ResultCacheRepository using Redis
 type RedisResultCache struct {
-	client *redisclient.Client
-	logger *zap.Logger
+	client   *redisclient.Client
+	logger   *zap.Logger
+	cacheTTL time.Duration
 }
 
-// NewRedisResultCache creates a new Redis result cache
-func NewRedisResultCache(client *redisclient.Client, logger *zap.Logger) repositories.ResultCacheRepository {
+// NewRedisResultCache creates a new Redis-based result cache
+func NewRedisResultCache(client *redisclient.Client, logger *zap.Logger, cacheTTL time.Duration) *RedisResultCache {
 	return &RedisResultCache{
-		client: client,
-		logger: logger.With(zap.String("component", "redis_result_cache")),
+		client:   client,
+		logger:   logger.With(zap.String("component", "redis_result_cache")),
+		cacheTTL: cacheTTL,
 	}
 }
 
@@ -70,7 +71,7 @@ func (r *RedisResultCache) Set(ctx context.Context, placeID string, results []mo
 		PlaceID:   placeID,
 		Results:   dtos,
 		CachedAt:  time.Now(),
-		ExpiresAt: time.Now().Add(ttl),
+		ExpiresAt: time.Now().Add(r.cacheTTL),
 	}
 
 	data, err := json.Marshal(cached)
@@ -79,12 +80,22 @@ func (r *RedisResultCache) Set(ctx context.Context, placeID string, results []mo
 		return fmt.Errorf("failed to marshal cached results: %w", err)
 	}
 
-	if err := r.client.Set(ctx, key, data, ttl).Err(); err != nil {
-		r.logger.Error("Failed to set cached results", zap.Error(err), zap.String("place_id", placeID))
-		return fmt.Errorf("failed to set cached results: %w", err)
+	// Store in Redis with TTL
+	err = r.client.Set(ctx, key, data, r.cacheTTL).Err()
+	if err != nil {
+		r.logger.Error("Failed to cache results",
+			zap.String("place_id", placeID),
+			zap.Error(err),
+		)
+		return fmt.Errorf("failed to cache results: %w", err)
 	}
 
-	r.logger.Info("Cached results", zap.String("place_id", placeID), zap.Int("results_count", len(results)), zap.Duration("ttl", ttl))
+	r.logger.Info("Cached results",
+		zap.String("place_id", placeID),
+		zap.Int("results_count", len(results)),
+		zap.Duration("ttl", r.cacheTTL),
+	)
+
 	return nil
 }
 

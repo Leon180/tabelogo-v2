@@ -1,41 +1,36 @@
 package infrastructure
 
 import (
-	"context"
-	"fmt"
+	"time"
 
+	"github.com/Leon180/tabelogo-v2/internal/spider/config"
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/persistence"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/scraper"
-	"github.com/Leon180/tabelogo-v2/pkg/config"
-	redisclient "github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 // Module provides infrastructure layer dependencies
 var Module = fx.Module("spider.infrastructure",
+	// Configuration
+	fx.Provide(config.DefaultConfig),
+
+	// Metrics
+	fx.Provide(metrics.NewSpiderMetrics),
+
+	// Persistence
 	fx.Provide(
-		NewRedis,
-		// Repositories
 		fx.Annotate(
 			persistence.NewRedisJobStore,
 			fx.As(new(repositories.JobRepository)),
 		),
 		fx.Annotate(
-			persistence.NewRedisResultCache,
+			newRedisResultCache,
 			fx.As(new(repositories.ResultCacheRepository)),
 		),
-		// Scraper
-		scraper.NewScraper,
-		// Metrics
-		metrics.NewSpiderMetrics,
-	),
-)
-
-// NewRedis creates a new Redis client with lifecycle management
-// Spider Service uses Redis DB 2
 func NewRedis(cfg *config.Config, lc fx.Lifecycle, logger *zap.Logger) *redisclient.Client {
 	rdb := redisclient.NewClient(&redisclient.Options{
 		Addr:     cfg.GetRedisAddr(),
