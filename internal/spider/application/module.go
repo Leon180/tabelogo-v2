@@ -5,14 +5,38 @@ import (
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/application/services"
 	"github.com/Leon180/tabelogo-v2/internal/spider/application/usecases"
+	"github.com/Leon180/tabelogo-v2/internal/spider/config"
+	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
+	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/scraper"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
+
+// newJobProcessor creates a JobProcessor with workerCount from config
+func newJobProcessor(
+	jobRepo repositories.JobRepository,
+	resultCache repositories.ResultCacheRepository,
+	scraper *scraper.TabelogScraper,
+	metrics *metrics.SpiderMetrics,
+	logger *zap.Logger,
+	cfg *config.SpiderConfig,
+) *services.JobProcessor {
+	return services.NewJobProcessor(
+		jobRepo,
+		resultCache,
+		scraper,
+		metrics,
+		logger,
+		cfg.WorkerCount,
+	)
+}
 
 // Module provides application layer dependencies
 var Module = fx.Module("application",
 	// Services
 	fx.Provide(
-		services.NewJobProcessor,
+		newJobProcessor,
 	),
 
 	// Use cases
