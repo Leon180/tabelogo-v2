@@ -17,7 +17,7 @@ import (
 func newJobProcessor(
 	jobRepo repositories.JobRepository,
 	resultCache repositories.ResultCacheRepository,
-	scraper *scraper.TabelogScraper,
+	scraperInstance *scraper.Scraper,
 	metrics *metrics.SpiderMetrics,
 	logger *zap.Logger,
 	cfg *config.SpiderConfig,
@@ -25,7 +25,7 @@ func newJobProcessor(
 	return services.NewJobProcessor(
 		jobRepo,
 		resultCache,
-		scraper,
+		scraperInstance,
 		metrics,
 		logger,
 		cfg.WorkerCount,
