@@ -2,11 +2,11 @@ package persistence
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
+	"github.com/Leon180/tabelogo-v2/internal/spider/domain/repositories"
 	redisclient "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -14,100 +14,85 @@ import (
 // RedisResultCache implements ResultCacheRepository using Redis
 type RedisResultCache struct {
 	client   *redisclient.Client
+	helper   *RedisHelper // Added
 	logger   *zap.Logger
 	cacheTTL time.Duration
 }
 
-// NewRedisResultCache creates a new Redis-based result cache
-func NewRedisResultCache(client *redisclient.Client, logger *zap.Logger, cacheTTL time.Duration) *RedisResultCache {
+// NewRedisResultCache creates a new Redis result cache
+func NewRedisResultCache(client *redisclient.Client, cacheTTL time.Duration, logger *zap.Logger) repositories.ResultCacheRepository { // Signature changed
 	return &RedisResultCache{
 		client:   client,
+		helper:   NewRedisHelper(client, logger), // Added
 		logger:   logger.With(zap.String("component", "redis_result_cache")),
 		cacheTTL: cacheTTL,
 	}
 }
 
-// Get retrieves cached results for a place
-func (r *RedisResultCache) Get(ctx context.Context, placeID string) (*models.CachedResult, error) {
-	key := fmt.Sprintf("tabelog:results:%s", placeID)
+// cacheKey generates a Redis key for a given Google Place ID.
+func (r *RedisResultCache) cacheKey(googleID string) string {
+	return fmt.Sprintf("tabelog:results:%s", googleID)
+}
 
-	data, err := r.client.Get(ctx, key).Bytes()
-	if err == redisclient.Nil {
-		return nil, nil // Cache miss
-	}
-	if err != nil {
-		r.logger.Error("Failed to get cached results", zap.Error(err), zap.String("place_id", placeID))
-		return nil, fmt.Errorf("failed to get cached results: %w", err)
-	}
+// Get retrieves cached results by Google Place ID
+func (r *RedisResultCache) Get(ctx context.Context, googleID string) (*models.CachedResult, error) {
+	key := r.cacheKey(googleID)
 
 	var cached models.CachedResult
-	if err := json.Unmarshal(data, &cached); err != nil {
-		r.logger.Error("Failed to unmarshal cached results", zap.Error(err))
-		return nil, fmt.Errorf("failed to unmarshal cached results: %w", err)
+	if err := r.helper.GetJSON(ctx, key, &cached); err != nil {
+		// Not found is not an error, just return nil
+		if err.Error() == fmt.Sprintf("key not found: %s", key) {
+			return nil, nil
+		}
+		r.logger.Error("Failed to get cached result", zap.Error(err), zap.String("google_id", googleID))
+		return nil, err
 	}
 
 	// Check if expired
 	if cached.IsExpired() {
-		r.logger.Info("Cached results expired", zap.String("place_id", placeID))
-		_ = r.Delete(ctx, placeID)
+		r.logger.Info("Cached result expired", zap.String("google_id", googleID))
+		r.helper.Delete(ctx, key)
 		return nil, nil
 	}
 
-	r.logger.Info("Cache hit", zap.String("place_id", placeID), zap.Int("results_count", len(cached.Results)))
+	r.logger.Info("Cache hit", zap.String("google_id", googleID))
 	return &cached, nil
 }
 
-// Set stores results in cache with TTL
-func (r *RedisResultCache) Set(ctx context.Context, placeID string, results []models.TabelogRestaurant, ttl time.Duration) error {
-	key := fmt.Sprintf("tabelog:results:%s", placeID)
+// Set stores cached results
+func (r *RedisResultCache) Set(ctx context.Context, googleID string, restaurants []models.TabelogRestaurant, ttl time.Duration) error {
+	key := r.cacheKey(googleID)
 
-	// Convert domain models to DTOs for JSON serialization
-	dtos := make([]models.TabelogRestaurantDTO, len(results))
-	for i, restaurant := range results {
-		dtos[i] = restaurant.ToDTO()
+	cached := &models.CachedResult{
+		GoogleID:    googleID,
+		Restaurants: restaurants,
+		CachedAt:    time.Now(),
+		ExpiresAt:   time.Now().Add(ttl),
 	}
 
-	cached := models.CachedResult{
-		PlaceID:   placeID,
-		Results:   dtos,
-		CachedAt:  time.Now(),
-		ExpiresAt: time.Now().Add(r.cacheTTL),
+	if err := r.helper.SetJSON(ctx, key, cached, ttl); err != nil {
+		r.logger.Error("Failed to set cached result", zap.Error(err), zap.String("google_id", googleID))
+		return err
 	}
 
-	data, err := json.Marshal(cached)
-	if err != nil {
-		r.logger.Error("Failed to marshal cached results", zap.Error(err))
-		return fmt.Errorf("failed to marshal cached results: %w", err)
-	}
-
-	// Store in Redis with TTL
-	err = r.client.Set(ctx, key, data, r.cacheTTL).Err()
-	if err != nil {
-		r.logger.Error("Failed to cache results",
-			zap.String("place_id", placeID),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to cache results: %w", err)
-	}
-
-	r.logger.Info("Cached results",
-		zap.String("place_id", placeID),
-		zap.Int("results_count", len(results)),
-		zap.Duration("ttl", r.cacheTTL),
+	r.logger.Info("Cached result stored",
+		zap.String("google_id", googleID),
+		zap.Int("restaurant_count", len(restaurants)),
+		zap.Duration("ttl", ttl),
 	)
 
 	return nil
 }
 
 // Delete removes cached results
-func (r *RedisResultCache) Delete(ctx context.Context, placeID string) error {
-	key := fmt.Sprintf("tabelog:results:%s", placeID)
+func (r *RedisResultCache) Delete(ctx context.Context, googleID string) error {
+	key := r.cacheKey(googleID)
 
-	if err := r.client.Del(ctx, key).Err(); err != nil {
-		r.logger.Error("Failed to delete cached results", zap.Error(err), zap.String("place_id", placeID))
-		return fmt.Errorf("failed to delete cached results: %w", err)
+	if err := r.helper.Delete(ctx, key); err != nil {
+		r.logger.Error("Failed to delete cached result", zap.Error(err), zap.String("google_id", googleID))
+		return err
 	}
 
-	r.logger.Info("Deleted cached results", zap.String("place_id", placeID))
+	r.logger.Info("Cached result deleted", zap.String("google_id", googleID))
 	return nil
 }
