@@ -7,35 +7,26 @@ import (
 
 	"github.com/Leon180/tabelogo-v2/internal/spider/domain/models"
 	"github.com/alicebob/miniredis/v2"
-	"github.com/redis/go-redis/v9"
+	redisclient "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
-func setupTestRedis(t *testing.T) (*redis.Client, func()) {
-	// Create mini redis server
-	mr, err := miniredis.Run()
-	if err != nil {
-		t.Fatalf("Failed to start miniredis: %v", err)
-	}
+func setupTestJobStore(t *testing.T) (*RedisJobStore, *miniredis.Miniredis) {
+	mr := miniredis.RunT(t)
 
-	client := redis.NewClient(&redis.Options{
+	client := redisclient.NewClient(&redisclient.Options{
 		Addr: mr.Addr(),
 	})
 
-	cleanup := func() {
-		client.Close()
-		mr.Close()
-	}
+	logger := zap.NewNop()
+	store := NewRedisJobStore(client, logger).(*RedisJobStore)
 
-	return client, cleanup
+	return store, mr
 }
 
 func TestRedisJobStore_SaveAndFind(t *testing.T) {
-	client, cleanup := setupTestRedis(t)
-	defer cleanup()
-
-	logger := zap.NewNop()
-	store := NewRedisJobStore(client, logger)
+	store, cleanup := setupTestJobStore(t)
+	defer cleanup.Close()
 
 	ctx := context.Background()
 
@@ -64,11 +55,8 @@ func TestRedisJobStore_SaveAndFind(t *testing.T) {
 }
 
 func TestRedisJobStore_FindByGoogleID(t *testing.T) {
-	client, cleanup := setupTestRedis(t)
-	defer cleanup()
-
-	logger := zap.NewNop()
-	store := NewRedisJobStore(client, logger)
+	store, mr := setupTestJobStore(t)
+	defer mr.Close()
 
 	ctx := context.Background()
 	googleID := "test-google-id"
@@ -92,11 +80,8 @@ func TestRedisJobStore_FindByGoogleID(t *testing.T) {
 }
 
 func TestRedisJobStore_Update(t *testing.T) {
-	client, cleanup := setupTestRedis(t)
-	defer cleanup()
-
-	logger := zap.NewNop()
-	store := NewRedisJobStore(client, logger)
+	store, mr := setupTestJobStore(t)
+	defer mr.Close()
 
 	ctx := context.Background()
 
@@ -119,11 +104,8 @@ func TestRedisJobStore_Update(t *testing.T) {
 }
 
 func TestRedisJobStore_Delete(t *testing.T) {
-	client, cleanup := setupTestRedis(t)
-	defer cleanup()
-
-	logger := zap.NewNop()
-	store := NewRedisJobStore(client, logger)
+	store, mr := setupTestJobStore(t)
+	defer mr.Close()
 
 	ctx := context.Background()
 
@@ -145,11 +127,8 @@ func TestRedisJobStore_Delete(t *testing.T) {
 }
 
 func TestRedisJobStore_FindPending(t *testing.T) {
-	client, cleanup := setupTestRedis(t)
-	defer cleanup()
-
-	logger := zap.NewNop()
-	store := NewRedisJobStore(client, logger)
+	store, mr := setupTestJobStore(t)
+	defer mr.Close()
 
 	ctx := context.Background()
 
@@ -186,11 +165,8 @@ func TestRedisJobStore_FindPending(t *testing.T) {
 }
 
 func TestRedisJobStore_TTL(t *testing.T) {
-	client, cleanup := setupTestRedis(t)
-	defer cleanup()
-
-	logger := zap.NewNop()
-	store := NewRedisJobStore(client, logger)
+	store, mr := setupTestJobStore(t)
+	defer mr.Close()
 
 	ctx := context.Background()
 
@@ -200,7 +176,7 @@ func TestRedisJobStore_TTL(t *testing.T) {
 
 	// Check TTL is set
 	key := "spider:jobs:" + job.ID().String()
-	ttl := client.TTL(ctx, key).Val()
+	ttl := mr.TTL(key)
 
 	if ttl <= 0 {
 		t.Error("Expected positive TTL")
