@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.4.0...tabelogo-v2/pkg-v0.5.0) (2025-12-14)
+
+
+### Features
+
+* Add Japanese name support to Restaurant model ([64694ce](https://github.com/Leon180/tabelogo-v2/commit/64694cec4fa9312567efde43ac8616ba07b8e674))
+* Add Prometheus metrics for Restaurant Service cache performance ([66f50b7](https://github.com/Leon180/tabelogo-v2/commit/66f50b7c0e1dd6eb96333397a8a993b1e936dfad))
+* Complete Map Service Phase 1 + Start Phase 2 Integration ([7739085](https://github.com/Leon180/tabelogo-v2/commit/773908597ee87969db5889f983e14fff3abcd90d))
+
 ## [0.4.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.3.0...tabelogo-v2/pkg-v0.4.0) (2025-12-02)
 
 
