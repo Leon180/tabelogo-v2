@@ -18,8 +18,7 @@ func setupTestJobStore(t *testing.T) (*RedisJobStore, *miniredis.Miniredis) {
 		Addr: mr.Addr(),
 	})
 
-	logger := zap.NewNop()
-	store := NewRedisJobStore(client, logger).(*RedisJobStore)
+	store := NewRedisJobStore(client, zap.NewNop()).(*RedisJobStore)
 
 	return store, mr
 }
@@ -176,7 +175,7 @@ func TestRedisJobStore_TTL(t *testing.T) {
 
 	// Check TTL is set
 	key := "spider:jobs:" + job.ID().String()
-	ttl := mr.TTL(key)
+	ttl := store.client.TTL(ctx, key).Val()
 
 	if ttl <= 0 {
 		t.Error("Expected positive TTL")
