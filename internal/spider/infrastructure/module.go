@@ -44,7 +44,7 @@ var Module = fx.Module("spider.infrastructure",
 
 // newRedisResultCache creates a Redis result cache with configured TTL
 func newRedisResultCache(client *redis.Client, logger *zap.Logger, cfg *config.SpiderConfig) repositories.ResultCacheRepository {
-	return persistence.NewRedisResultCache(client, logger, cfg.CacheTTL)
+	return persistence.NewRedisResultCache(client, cfg.CacheTTL, logger)
 }
 
 // newCircuitBreaker creates a circuit breaker with configured settings
