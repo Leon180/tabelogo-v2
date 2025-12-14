@@ -56,12 +56,24 @@ func (p *JobProcessor) Start(ctx context.Context) {
 	// Set worker pool size metric
 	p.metrics.SetWorkerPoolSize(p.workerCount)
 
-	// Start workers
-	p.wg.Add(p.workerCount)
+	// Start worker goroutines
 	for i := 0; i < p.workerCount; i++ {
-		go p.worker(ctx, i)
+		p.wg.Add(1)
+		go func(workerID int) {
+			defer p.wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					p.logger.Error("Worker panic recovered",
+						zap.Int("worker_id", workerID),
+						zap.Any("panic", r),
+						zap.Stack("stack"),
+					)
+					p.metrics.RecordJobError("worker_panic")
+				}
+			}()
+			p.worker(ctx, workerID)
+		}(i)
 	}
-
 	// Start job fetcher
 	p.wg.Add(1)
 	go p.jobFetcher(ctx)

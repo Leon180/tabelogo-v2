@@ -77,6 +77,17 @@ func (s *Scraper) ScrapeRestaurants(area, placeName string) ([]models.TabelogRes
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					s.logger.Error("Scraper goroutine panic recovered",
+						zap.String("url", url),
+						zap.String("place_name", placeName),
+						zap.Any("panic", r),
+						zap.Stack("stack"),
+					)
+					s.metrics.RecordScrapeError("goroutine_panic")
+				}
+			}()
 
 			// Track detail scrape duration
 			detailStart := time.Now()
