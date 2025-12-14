@@ -13,7 +13,6 @@ var Module = fx.Module("application",
 	// Services
 	fx.Provide(
 		services.NewJobProcessor,
-		services.NewRateLimiter,
 	),
 
 	// Use cases
