@@ -8,6 +8,7 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/auth/domain/model"
 	"github.com/Leon180/tabelogo-v2/internal/auth/domain/repository"
 	"github.com/Leon180/tabelogo-v2/pkg/jwt"
+	"github.com/google/uuid"
 )
 
 // AuthService defines the application service interface
@@ -71,12 +72,14 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 	}
 
 	// Generate tokens
-	accessToken, _, err := s.jwtMaker.CreateToken(user.ID(), 15*time.Minute)
+	// TODO: Replace with actual session creation in next phase
+	temporarySessionID := uuid.New() // Temporary until session management is implemented
+	accessToken, _, err := s.jwtMaker.CreateToken(user.ID(), temporarySessionID, string(user.Role()), 15*time.Minute)
 	if err != nil {
 		return "", "", err
 	}
 
-	refreshToken, payload, err := s.jwtMaker.CreateToken(user.ID(), 24*time.Hour)
+	refreshToken, payload, err := s.jwtMaker.CreateToken(user.ID(), temporarySessionID, string(user.Role()), 24*time.Hour)
 	if err != nil {
 		return "", "", err
 	}
@@ -135,12 +138,14 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (st
 	// Actually, we should implement Revoke in Redis repo properly if we want rotation.
 	// For now, let's just issue new tokens.
 
-	accessToken, _, err := s.jwtMaker.CreateToken(user.ID(), 15*time.Minute)
+	// TODO: Replace with actual session management in next phase
+	temporarySessionID := payload.SessionID // Use existing session ID from refresh token
+	accessToken, _, err := s.jwtMaker.CreateToken(user.ID(), temporarySessionID, string(user.Role()), 15*time.Minute)
 	if err != nil {
 		return "", "", err
 	}
 
-	newRefreshToken, newPayload, err := s.jwtMaker.CreateToken(user.ID(), 24*time.Hour)
+	newRefreshToken, newPayload, err := s.jwtMaker.CreateToken(user.ID(), temporarySessionID, string(user.Role()), 24*time.Hour)
 	if err != nil {
 		return "", "", err
 	}

@@ -189,7 +189,8 @@ func TestAuthService_ValidateToken(t *testing.T) {
 		require.NoError(t, err)
 
 		jwtMaker, _ := jwt.NewJWTMaker("test-secret-key-must-be-at-least-32-characters-long")
-		token, _, err := jwtMaker.CreateToken(user.ID(), 15*time.Minute)
+		testSessionID := uuid.New()
+		token, _, err := jwtMaker.CreateToken(user.ID(), testSessionID, string(user.Role()), 15*time.Minute)
 		require.NoError(t, err)
 
 		userRepo.On("GetByID", ctx, user.ID()).Return(user, nil)
@@ -224,7 +225,8 @@ func TestAuthService_RefreshToken(t *testing.T) {
 
 		// Create a refresh token
 		jwtMaker, _ := jwt.NewJWTMaker("test-secret-key-must-be-at-least-32-characters-long")
-		oldRefreshToken, payload, err := jwtMaker.CreateToken(user.ID(), 24*time.Hour)
+		testSessionID := uuid.New()
+		oldRefreshToken, payload, err := jwtMaker.CreateToken(user.ID(), testSessionID, string(user.Role()), 24*time.Hour)
 		require.NoError(t, err)
 
 		refreshTokenEntity := model.NewRefreshToken(user.ID(), oldRefreshToken, payload.ExpiredAt)
