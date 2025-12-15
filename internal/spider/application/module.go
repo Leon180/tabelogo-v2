@@ -54,8 +54,9 @@ func registerJobProcessorLifecycle(lc fx.Lifecycle, processor *services.JobProce
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			// Start the job processor with a background context
-			// The processor runs continuously and manages its own lifecycle
-			go processor.Start(ctx)
+			// We use context.Background() instead of ctx because the lifecycle context
+			// gets cancelled after startup, which would cause all workers to exit
+			go processor.Start(context.Background())
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
