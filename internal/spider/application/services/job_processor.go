@@ -60,8 +60,8 @@ func (p *JobProcessor) Start(ctx context.Context) {
 	for i := 0; i < p.workerCount; i++ {
 		p.wg.Add(1)
 		go func(workerID int) {
-			defer p.wg.Done()
 			defer func() {
+				// Recover from panic first
 				if r := recover(); r != nil {
 					p.logger.Error("Worker panic recovered",
 						zap.Int("worker_id", workerID),
@@ -70,7 +70,10 @@ func (p *JobProcessor) Start(ctx context.Context) {
 					)
 					p.metrics.RecordScrapeError("worker_panic")
 				}
+				// Always call Done() last, after panic recovery
+				p.wg.Done()
 			}()
+
 			p.worker(ctx, workerID)
 		}(i)
 	}
