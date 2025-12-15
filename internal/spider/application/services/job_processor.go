@@ -123,8 +123,7 @@ func (p *JobProcessor) SubmitJob(ctx context.Context, jobID models.JobID) error 
 
 // worker processes jobs from the queue
 func (p *JobProcessor) worker(ctx context.Context, workerID int) {
-	defer p.wg.Done()
-
+	// Note: wg.Done() is called in the goroutine's defer, not here
 	logger := p.logger.With(zap.Int("worker_id", workerID))
 	logger.Info("Worker started")
 
