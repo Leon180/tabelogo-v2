@@ -241,7 +241,7 @@ func TestAuthService_ValidateToken(t *testing.T) {
 
 		// Create a user and generate a token
 		user, err := model.NewUser("test@example.com", "password123", "testuser")
-		require.NoError(t: err)
+		require.NoError(t, err)
 
 		jwtMaker, _ := jwt.NewJWTMaker("test-secret-key-must-be-at-least-32-characters-long")
 		testSessionID := uuid.New()
