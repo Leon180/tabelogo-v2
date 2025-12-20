@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -8,6 +10,8 @@ import (
 	"github.com/Leon180/tabelogo-v2/pkg/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 const (
@@ -17,68 +21,54 @@ const (
 	BearerPrefix = "Bearer "
 	// UserIDKey is the context key for user ID
 	UserIDKey = "user_id"
+	// SessionIDKey is the context key for session ID
+	SessionIDKey = "session_id"
 	// UserRoleKey is the context key for user role
 	UserRoleKey = "user_role"
 )
 
-// JWTClaims represents the JWT claims
+// JWTClaims represents the JWT claims with session support
 type JWTClaims struct {
-	UserID string `json:"user_id"`
-	Role   string `json:"role"`
+	UserID    string `json:"user_id"`
+	SessionID string `json:"session_id"` // NEW: Session ID for validation
+	Role      string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-// AuthConfig holds the configuration for auth middleware
-type AuthConfig struct {
-	// JWTSecret is the secret key for JWT validation
-	JWTSecret string
-	// SkipPaths are paths that skip authentication
-	SkipPaths []string
+// AuthMiddleware handles authentication with session validation
+type AuthMiddleware struct {
+	jwtSecret string
+	redis     *redis.Client
+	logger    *zap.Logger
 }
 
-// Auth returns a middleware that validates JWT tokens
-func Auth(config AuthConfig) gin.HandlerFunc {
+// NewAuthMiddleware creates a new auth middleware with session support
+func NewAuthMiddleware(jwtSecret string, redis *redis.Client, logger *zap.Logger) *AuthMiddleware {
+	return &AuthMiddleware{
+		jwtSecret: jwtSecret,
+		redis:     redis,
+		logger:    logger,
+	}
+}
+
+// RequireAuth validates JWT and checks session is active
+func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Check if path should skip authentication
-		if slices.Contains(config.SkipPaths, c.Request.URL.Path) {
-			c.Next()
-			return
-		}
-
-		// Get token from header
-		authHeader := c.GetHeader(AuthorizationHeader)
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    errors.ErrCodeUnauthorized,
-				"message": "Missing authorization header",
-			})
-			c.Abort()
-			return
-		}
-
-		// Check Bearer prefix
-		if !strings.HasPrefix(authHeader, BearerPrefix) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    errors.ErrCodeUnauthorized,
-				"message": "Invalid authorization header format",
-			})
-			c.Abort()
-			return
-		}
-
-		// Extract token
-		tokenString := strings.TrimPrefix(authHeader, BearerPrefix)
-
-		// Parse and validate token
-		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-			// Validate signing method
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New(errors.ErrCodeUnauthorized, "Invalid signing method")
-			}
-			return []byte(config.JWTSecret), nil
-		})
-
+		// 1. Extract token from header
+		token, err := m.extractToken(c)
 		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code":    errors.ErrCodeUnauthorized,
+				"message": "Missing or invalid authorization header",
+			})
+			c.Abort()
+			return
+		}
+
+		// 2. Verify JWT signature and expiry
+		claims, err := m.verifyJWT(token)
+		if err != nil {
+			m.logger.Debug("JWT verification failed", zap.Error(err))
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    errors.ErrCodeUnauthorized,
 				"message": "Invalid or expired token",
@@ -87,27 +77,66 @@ func Auth(config AuthConfig) gin.HandlerFunc {
 			return
 		}
 
-		// Extract claims
-		claims, ok := token.Claims.(*JWTClaims)
-		if !ok || !token.Valid {
+		// 3. Validate session in Redis
+		if err := m.validateSession(c.Request.Context(), claims.SessionID); err != nil {
+			m.logger.Debug("Session validation failed",
+				zap.String("session_id", claims.SessionID),
+				zap.Error(err),
+			)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    errors.ErrCodeUnauthorized,
-				"message": "Invalid token claims",
+				"message": "Session expired or revoked",
 			})
 			c.Abort()
 			return
 		}
 
-		// Set user info in context
+		// 4. Set user context
 		c.Set(UserIDKey, claims.UserID)
+		c.Set(SessionIDKey, claims.SessionID)
 		c.Set(UserRoleKey, claims.Role)
 
 		c.Next()
 	}
 }
 
-// RequireRole returns a middleware that checks if user has required role
-func RequireRole(roles ...string) gin.HandlerFunc {
+// Optional validates token if present but doesn't require it
+func (m *AuthMiddleware) Optional() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Try to extract token
+		token, err := m.extractToken(c)
+		if err != nil {
+			// No token or invalid format - continue without auth
+			c.Next()
+			return
+		}
+
+		// Try to verify JWT
+		claims, err := m.verifyJWT(token)
+		if err != nil {
+			// Invalid token - continue without auth
+			c.Next()
+			return
+		}
+
+		// Try to validate session
+		if err := m.validateSession(c.Request.Context(), claims.SessionID); err != nil {
+			// Invalid session - continue without auth
+			c.Next()
+			return
+		}
+
+		// Valid auth - set context
+		c.Set(UserIDKey, claims.UserID)
+		c.Set(SessionIDKey, claims.SessionID)
+		c.Set(UserRoleKey, claims.Role)
+
+		c.Next()
+	}
+}
+
+// RequireRole checks if user has required role
+func (m *AuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user role from context
 		userRole, exists := c.Get(UserRoleKey)
@@ -132,9 +161,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 		}
 
 		// Check if role is in allowed roles
-		allowed := slices.Contains(roles, roleStr)
-
-		if !allowed {
+		if !slices.Contains(roles, roleStr) {
 			c.JSON(http.StatusForbidden, gin.H{
 				"code":    errors.ErrCodeForbidden,
 				"message": "Insufficient permissions",
@@ -147,6 +174,66 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 	}
 }
 
+// extractToken extracts JWT token from Authorization header
+func (m *AuthMiddleware) extractToken(c *gin.Context) (string, error) {
+	authHeader := c.GetHeader(AuthorizationHeader)
+	if authHeader == "" {
+		return "", fmt.Errorf("missing authorization header")
+	}
+
+	if !strings.HasPrefix(authHeader, BearerPrefix) {
+		return "", fmt.Errorf("invalid authorization header format")
+	}
+
+	return strings.TrimPrefix(authHeader, BearerPrefix), nil
+}
+
+// verifyJWT verifies JWT signature and returns claims
+func (m *AuthMiddleware) verifyJWT(tokenString string) (*JWTClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Validate signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("invalid signing method")
+		}
+		return []byte(m.jwtSecret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	return claims, nil
+}
+
+// validateSession checks if session is active in Redis
+func (m *AuthMiddleware) validateSession(ctx context.Context, sessionID string) error {
+	sessionKey := "session:" + sessionID
+
+	// Check if session exists
+	exists, err := m.redis.Exists(ctx, sessionKey).Result()
+	if err != nil {
+		return fmt.Errorf("redis error: %w", err)
+	}
+	if exists == 0 {
+		return fmt.Errorf("session not found")
+	}
+
+	// Check if session is active
+	isActive, err := m.redis.HGet(ctx, sessionKey, "is_active").Result()
+	if err != nil {
+		return fmt.Errorf("failed to get session status: %w", err)
+	}
+	if isActive != "true" {
+		return fmt.Errorf("session is not active")
+	}
+
+	return nil
+}
+
 // GetUserID retrieves user ID from context
 func GetUserID(c *gin.Context) (string, bool) {
 	userID, exists := c.Get(UserIDKey)
@@ -154,6 +241,16 @@ func GetUserID(c *gin.Context) (string, bool) {
 		return "", false
 	}
 	id, ok := userID.(string)
+	return id, ok
+}
+
+// GetSessionID retrieves session ID from context
+func GetSessionID(c *gin.Context) (string, bool) {
+	sessionID, exists := c.Get(SessionIDKey)
+	if !exists {
+		return "", false
+	}
+	id, ok := sessionID.(string)
 	return id, ok
 }
 
