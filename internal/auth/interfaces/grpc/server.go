@@ -37,31 +37,25 @@ func (s *AuthServer) Register(ctx context.Context, req *authv1.RegisterRequest) 
 }
 
 func (s *AuthServer) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginResponse, error) {
-	accessToken, refreshToken, err := s.service.Login(ctx, req.GetEmail(), req.GetPassword())
+	// Extract device info and IP - for gRPC we use simple defaults
+	deviceInfo := "grpc-client"
+	ipAddress := "unknown"
+
+	accessToken, refreshToken, err := s.service.Login(
+		ctx,
+		req.GetEmail(),
+		req.GetPassword(),
+		deviceInfo,
+		ipAddress,
+		false, // gRPC doesn't support remember-me for now
+	)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "failed to login: %v", err)
 	}
 
-	// We need to get user details to return in response.
-	// The service Login method currently returns tokens.
-	// Ideally it should return user info too or we fetch it.
-	// Let's fetch user by email again or update service to return user.
-	// For efficiency, let's update service later. For now, we just return tokens and empty user info
-	// or fetch it if critical. The proto defines user_id and username in response.
-	// Let's skip user info for now or make a quick fetch if needed.
-	// Actually, let's just return tokens and empty strings for user info to unblock,
-	// or better, update the service to return user info.
-	// Given the user is waiting, I'll stick to the current service signature and maybe fetch user if I can,
-	// but I don't have the user ID here easily without parsing the token or fetching by email.
-	// Let's fetch by email since we have it in request.
-	// Wait, I don't have access to repo here.
-	// I will leave user_id and username empty for this iteration or update service in next step.
-
 	return &authv1.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		// UserId:     user.ID().String(),
-		// Username:   user.Username(),
 	}, nil
 }
 
