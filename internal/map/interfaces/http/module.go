@@ -22,6 +22,7 @@ import (
 // Module provides HTTP interface layer dependencies
 var Module = fx.Module("map.http",
 	fx.Provide(
+		NewAuthMiddleware,
 		NewMapHandler,
 		NewHTTPServer,
 	),
@@ -56,11 +57,17 @@ func NewHTTPServer() *gin.Engine {
 	return router
 }
 
+// NewAuthMiddleware creates auth middleware for Map Service
+func NewAuthMiddleware(cfg *config.Config, redis *redis.Client, logger *zap.Logger) *middleware.AuthMiddleware {
+	return middleware.NewAuthMiddleware(cfg.JWT.Secret, redis, logger)
+}
+
 // RegisterRoutes registers HTTP routes and manages server lifecycle
 func RegisterRoutes(
 	lc fx.Lifecycle,
 	router *gin.Engine,
 	handler *MapHandler,
+	authMW *middleware.AuthMiddleware,
 	cfg *config.Config,
 	logger *zap.Logger,
 	redisClient *redis.Client,
@@ -86,8 +93,9 @@ func RegisterRoutes(
 		Logger: logger,
 	})
 
-	// Map API routes
+	// Map API routes with optional auth (public access + user tracking)
 	mapGroup := router.Group("/api/v1/map")
+	mapGroup.Use(authMW.Optional()) // Track authenticated users but don't require auth
 	{
 		// Handle OPTIONS for CORS preflight
 		mapGroup.OPTIONS("/quick_search", func(c *gin.Context) {
