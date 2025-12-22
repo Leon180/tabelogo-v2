@@ -55,9 +55,12 @@ func NewAuthMiddleware(jwtSecret string, redis *redis.Client, logger *zap.Logger
 // RequireAuth validates JWT and checks session is active
 func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		m.logger.Debug("RequireAuth: Starting authentication check")
+
 		// 1. Extract token from header
 		token, err := m.extractToken(c)
 		if err != nil {
+			m.logger.Debug("RequireAuth: Token extraction failed", zap.Error(err))
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    errors.ErrCodeUnauthorized,
 				"message": "Missing or invalid authorization header",
@@ -65,11 +68,15 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		m.logger.Debug("RequireAuth: Token extracted", zap.String("token_prefix", token[:20]))
 
 		// 2. Verify JWT signature and expiry
 		claims, err := m.verifyJWT(token)
 		if err != nil {
-			m.logger.Debug("JWT verification failed", zap.Error(err))
+			m.logger.Debug("JWT verification failed",
+				zap.Error(err),
+				zap.String("token_prefix", token[:20]),
+			)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    errors.ErrCodeUnauthorized,
 				"message": "Invalid or expired token",
@@ -77,11 +84,17 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		m.logger.Debug("RequireAuth: JWT verified successfully",
+			zap.String("user_id", claims.UserID),
+			zap.String("session_id", claims.SessionID),
+			zap.String("role", claims.Role),
+		)
 
 		// 3. Validate session in Redis
 		if err := m.validateSession(c.Request.Context(), claims.SessionID); err != nil {
 			m.logger.Debug("Session validation failed",
 				zap.String("session_id", claims.SessionID),
+				zap.String("user_id", claims.UserID),
 				zap.Error(err),
 			)
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -91,11 +104,19 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		m.logger.Debug("RequireAuth: Session validated successfully",
+			zap.String("session_id", claims.SessionID),
+		)
 
 		// 4. Set user context
 		c.Set(UserIDKey, claims.UserID)
 		c.Set(SessionIDKey, claims.SessionID)
 		c.Set(UserRoleKey, claims.Role)
+
+		m.logger.Debug("RequireAuth: Authentication successful",
+			zap.String("user_id", claims.UserID),
+			zap.String("session_id", claims.SessionID),
+		)
 
 		c.Next()
 	}
@@ -213,15 +234,28 @@ func (m *AuthMiddleware) verifyJWT(tokenString string) (*JWTClaims, error) {
 // validateSession checks if session is active in Redis
 func (m *AuthMiddleware) validateSession(ctx context.Context, sessionID string) error {
 	sessionKey := "session:" + sessionID
+	m.logger.Debug("validateSession: Checking session",
+		zap.String("session_key", sessionKey),
+	)
 
 	// Get session as JSON string
 	sessionJSON, err := m.redis.Get(ctx, sessionKey).Result()
 	if err != nil {
 		if err == redis.Nil {
+			m.logger.Debug("validateSession: Session not found in Redis",
+				zap.String("session_key", sessionKey),
+			)
 			return fmt.Errorf("session not found")
 		}
+		m.logger.Error("validateSession: Redis error",
+			zap.String("session_key", sessionKey),
+			zap.Error(err),
+		)
 		return fmt.Errorf("redis error: %w", err)
 	}
+	m.logger.Debug("validateSession: Session found in Redis",
+		zap.String("session_json", sessionJSON),
+	)
 
 	// Parse JSON to check is_active field
 	var session struct {
@@ -229,13 +263,26 @@ func (m *AuthMiddleware) validateSession(ctx context.Context, sessionID string) 
 	}
 
 	if err := json.Unmarshal([]byte(sessionJSON), &session); err != nil {
+		m.logger.Error("validateSession: Failed to parse session JSON",
+			zap.String("session_json", sessionJSON),
+			zap.Error(err),
+		)
 		return fmt.Errorf("failed to parse session data: %w", err)
 	}
+	m.logger.Debug("validateSession: Session parsed",
+		zap.Bool("is_active", session.IsActive),
+	)
 
 	if !session.IsActive {
+		m.logger.Debug("validateSession: Session is not active",
+			zap.String("session_key", sessionKey),
+		)
 		return fmt.Errorf("session is not active")
 	}
 
+	m.logger.Debug("validateSession: Session validation successful",
+		zap.String("session_key", sessionKey),
+	)
 	return nil
 }
 
