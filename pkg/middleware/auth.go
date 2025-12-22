@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"slices"
@@ -213,21 +214,25 @@ func (m *AuthMiddleware) verifyJWT(tokenString string) (*JWTClaims, error) {
 func (m *AuthMiddleware) validateSession(ctx context.Context, sessionID string) error {
 	sessionKey := "session:" + sessionID
 
-	// Check if session exists
-	exists, err := m.redis.Exists(ctx, sessionKey).Result()
+	// Get session as JSON string
+	sessionJSON, err := m.redis.Get(ctx, sessionKey).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return fmt.Errorf("session not found")
+		}
 		return fmt.Errorf("redis error: %w", err)
 	}
-	if exists == 0 {
-		return fmt.Errorf("session not found")
+
+	// Parse JSON to check is_active field
+	var session struct {
+		IsActive bool `json:"is_active"`
 	}
 
-	// Check if session is active
-	isActive, err := m.redis.HGet(ctx, sessionKey, "is_active").Result()
-	if err != nil {
-		return fmt.Errorf("failed to get session status: %w", err)
+	if err := json.Unmarshal([]byte(sessionJSON), &session); err != nil {
+		return fmt.Errorf("failed to parse session data: %w", err)
 	}
-	if isActive != "true" {
+
+	if !session.IsActive {
 		return fmt.Errorf("session is not active")
 	}
 
