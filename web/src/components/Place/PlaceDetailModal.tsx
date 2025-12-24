@@ -68,10 +68,18 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
     console.log('🖼️ Place data:', {
       hasRestaurantData: !!restaurantData,
       hasMapData: !!mapData,
+      restaurantMetadata: restaurantData?.restaurant?.metadata,
       photos: place.photos,
       photosLength: place.photos?.length,
       firstPhoto: place.photos?.[0],
+      photoCheck: place.photos && place.photos.length > 0,
     });
+  }
+
+  // Store for debugging
+  if (typeof window !== 'undefined') {
+    (window as any).placePhotos = place?.photos;
+    (window as any).restaurantData = restaurantData;
   }
 
   // Helper function to convert Restaurant Service format to Place format
