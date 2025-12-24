@@ -48,6 +48,15 @@ const restaurantClient = axios.create({
     timeout: 10000,
 });
 
+// Add Authorization header to all requests
+restaurantClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 // Response interceptor for error handling
 restaurantClient.interceptors.response.use(
     (response) => response,
