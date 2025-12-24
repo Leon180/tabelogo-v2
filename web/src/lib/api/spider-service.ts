@@ -145,16 +145,20 @@ export async function searchTabelog(
 
     console.log('🔄 Starting SSE stream for job:', jobId);
 
+    // Get token for SSE connection
+    const token = localStorage.getItem('access_token');
+
     // Subscribe to SSE stream for real-time updates
+    // Note: EventSource doesn't support custom headers, so we pass token as query param
     return new Promise((resolve, reject) => {
         const eventSource = new EventSource(
-            `http://localhost:18084/api/v1/spider/jobs/${jobId}/stream`
+            `http://localhost:18084/api/v1/spider/jobs/${jobId}/stream${token ? `?token=${token}` : ''}`
         );
 
         let lastStatus: JobStatusResponse | null = null;
 
         // Handle status updates
-        eventSource.addEventListener('update', (event) => {
+        eventSource.addEventListener('update', (event: any) => {
             const status: JobStatusResponse = JSON.parse(event.data);
             lastStatus = status;
 

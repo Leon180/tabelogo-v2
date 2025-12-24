@@ -28,7 +28,21 @@ func NewSSEHandler(jobRepo repositories.JobRepository, logger *zap.Logger) *SSEH
 
 // StreamJobStatus streams job status updates via SSE
 // GET /api/v1/spider/jobs/:job_id/stream
+// Supports both Authorization header and ?token= query parameter (for EventSource compatibility)
 func (h *SSEHandler) StreamJobStatus(c *gin.Context) {
+	jobIDStr := c.Param("job_id")
+
+	// EventSource doesn't support custom headers, so we also accept token as query param
+	token := c.Query("token")
+	if token != "" {
+		// Set Authorization header from query parameter
+		c.Request.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	h.logger.Info("SSE stream requested",
+		zap.String("job_id", jobIDStr),
+		zap.Bool("has_token", token != ""),
+	)
 	defer func() {
 		if r := recover(); r != nil {
 			h.logger.Error("SSE handler panic recovered",
