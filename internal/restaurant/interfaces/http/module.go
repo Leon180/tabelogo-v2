@@ -96,7 +96,8 @@ func RegisterRoutes(
 		{
 			// Admin-only operations
 			protectedRestaurants.POST("", authMW.RequireRole("admin"), handler.CreateRestaurant)
-			protectedRestaurants.PATCH("/:id", authMW.RequireRole("admin"), handler.UpdateRestaurant)
+			// Allow authenticated users to update restaurant details (e.g., Japanese name)
+			protectedRestaurants.PATCH("/:id", handler.UpdateRestaurant)
 		}
 
 		// Protected favorite routes (require authentication)
