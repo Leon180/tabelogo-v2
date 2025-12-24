@@ -63,6 +63,17 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
   // Extract place data - Restaurant Service returns different format
   const place = restaurantData ? convertRestaurantToPlace(restaurantData.restaurant) : mapData?.result;
 
+  // Debug logging
+  if (place) {
+    console.log('🖼️ Place data:', {
+      hasRestaurantData: !!restaurantData,
+      hasMapData: !!mapData,
+      photos: place.photos,
+      photosLength: place.photos?.length,
+      firstPhoto: place.photos?.[0],
+    });
+  }
+
   // Helper function to convert Restaurant Service format to Place format
   function convertRestaurantToPlace(restaurant: any): Place {
     return {
