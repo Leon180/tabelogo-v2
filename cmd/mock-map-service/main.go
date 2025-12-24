@@ -3,16 +3,42 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+// LatencyConfig controls response delay simulation
+type LatencyConfig struct {
+	Enabled    bool          // Enable latency simulation
+	MinLatency time.Duration // Minimum latency
+	MaxLatency time.Duration // Maximum latency
+}
+
+// Simulate adds a random delay if latency is enabled
+func (lc *LatencyConfig) Simulate() {
+	if !lc.Enabled {
+		return
+	}
+
+	// Random delay between min and max
+	delay := lc.MinLatency
+	if lc.MaxLatency > lc.MinLatency {
+		diff := lc.MaxLatency - lc.MinLatency
+		delay += time.Duration(rand.Int63n(int64(diff)))
+	}
+
+	time.Sleep(delay)
+}
 
 // MockMapService provides mock Google Maps API endpoints
 type MockMapService struct {
 	router   *gin.Engine
 	testData *TestDataSet
+	latency  *LatencyConfig
 }
 
 // TestDataSet holds mock restaurant data
@@ -67,9 +93,13 @@ func NewMockMapService() *MockMapService {
 	// Load test data
 	testData := loadTestData()
 
+	// Load latency configuration
+	latencyConfig := loadLatencyConfig()
+
 	service := &MockMapService{
 		router:   router,
 		testData: testData,
+		latency:  latencyConfig,
 	}
 
 	service.setupRoutes()
@@ -98,6 +128,9 @@ func (s *MockMapService) setupRoutes() {
 
 // handleTextSearch handles text search requests
 func (s *MockMapService) handleTextSearch(c *gin.Context) {
+	// Simulate latency
+	s.latency.Simulate()
+
 	var req struct {
 		TextQuery string `json:"textQuery"`
 	}
@@ -119,6 +152,9 @@ func (s *MockMapService) handleTextSearch(c *gin.Context) {
 
 // handlePlaceDetails handles place details requests
 func (s *MockMapService) handlePlaceDetails(c *gin.Context) {
+	// Simulate latency
+	s.latency.Simulate()
+
 	placeId := c.Param("placeId")
 
 	log.Printf("📍 Place details: %s", placeId)
