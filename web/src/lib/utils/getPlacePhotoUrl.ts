@@ -1,6 +1,10 @@
 /**
  * Generate Google Places Photo URL from photo name
- * @param photoName - Photo name from Google Places API (e.g., "places/ChIJ...")
+ * 
+ * IMPORTANT: Google Places API (New) requires different endpoint for photos
+ * The photo reference needs to be fetched with proper authentication
+ * 
+ * @param photoName - Photo name from Google Places API (e.g., "places/ChIJ.../photos/...")
  * @param maxWidth - Maximum width in pixels (default: 400)
  * @param maxHeight - Maximum height in pixels (default: 300)
  * @returns Full URL to fetch the photo
@@ -17,14 +21,14 @@ export function getPlacePhotoUrl(
         return '';
     }
 
-    // Google Places Photo API endpoint
-    const url = `https://places.googleapis.com/v1/${photoName}/media?key=${apiKey}&maxWidthPx=${maxWidth}&maxHeightPx=${maxHeight}`;
+    // Google Places API (New) Photo endpoint
+    // Note: This requires Places API (New) to be enabled in Google Cloud Console
+    // and the API key must have permission to access Places API (New)
+    const url = `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=${maxHeight}&maxWidthPx=${maxWidth}&key=${apiKey}`;
 
-    console.log('🖼️ Generated photo URL:', {
-        photoName: photoName.substring(0, 50) + '...',
-        url: url.substring(0, 100) + '...',
+    console.log('🖼️ Photo URL:', {
+        photoName: photoName.substring(0, 60) + '...',
         hasKey: !!apiKey,
-        keyPrefix: apiKey?.substring(0, 10) + '...',
     });
 
     return url;
