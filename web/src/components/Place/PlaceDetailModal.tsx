@@ -76,6 +76,13 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
 
   // Helper function to convert Restaurant Service format to Place format
   function convertRestaurantToPlace(restaurant: any): Place {
+    // Restaurant Service stores photos in metadata.photos
+    const photos = restaurant.metadata?.photos?.map((photo: any) => ({
+      name: photo.name,
+      widthPx: photo.width,
+      heightPx: photo.height,
+    })) || mapData?.result?.photos;
+
     return {
       id: restaurant.external_id,
       area: restaurant.area,
@@ -89,8 +96,8 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       priceLevel: restaurant.price_range ? `PRICE_LEVEL_${restaurant.price_range}` : undefined,
       nationalPhoneNumber: restaurant.phone,
       websiteUri: restaurant.website,
-      // Map photos if available from Map Service fallback
-      photos: mapData?.result?.photos,
+      // Use photos from Restaurant Service metadata, fallback to Map Service
+      photos,
     } as Place;
   }
 
