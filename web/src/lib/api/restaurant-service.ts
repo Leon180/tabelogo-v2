@@ -64,7 +64,13 @@ restaurantClient.interceptors.response.use(
         if (error.response) {
             const { status, data } = error.response;
 
-            if (status === 404) {
+            if (status === 401) {
+                console.error('Authentication required:', data);
+                throw new Error('Authentication required. Please login again.');
+            } else if (status === 403) {
+                console.error('Permission denied:', data);
+                throw new Error('Permission denied. Admin access required.');
+            } else if (status === 404) {
                 console.warn('Restaurant not found:', data);
                 throw new NotFoundError(data.message);
             } else if (status === 400) {
