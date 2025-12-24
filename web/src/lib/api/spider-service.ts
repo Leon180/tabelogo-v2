@@ -9,6 +9,15 @@ const spiderClient = axios.create({
     },
 });
 
+// Add Authorization header to all requests
+spiderClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 // ============================================
 // TypeScript Interfaces
 // ============================================
@@ -83,7 +92,10 @@ spiderClient.interceptors.response.use(
         if (error.response) {
             const { status, data } = error.response;
 
-            if (status === 500) {
+            if (status === 401) {
+                // Authentication failed - token invalid or expired
+                throw new SpiderServiceError('Authentication required. Please login again.');
+            } else if (status === 500) {
                 throw new ScrapingError(data.message || 'Failed to scrape Tabelog');
             } else if (status === 400) {
                 throw new SpiderServiceError(data.message || 'Invalid request parameters');
