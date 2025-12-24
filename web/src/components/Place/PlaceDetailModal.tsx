@@ -78,8 +78,8 @@ export function PlaceDetailModal({ placeId, isOpen, onClose }: PlaceDetailModalP
       priceLevel: restaurant.price_range ? `PRICE_LEVEL_${restaurant.price_range}` : undefined,
       nationalPhoneNumber: restaurant.phone,
       websiteUri: restaurant.website,
-      // Note: Restaurant Service doesn't include photos, opening hours yet
-      // These will be added in future updates
+      // Map photos if available from Map Service fallback
+      photos: mapData?.result?.photos,
     } as Place;
   }
 
