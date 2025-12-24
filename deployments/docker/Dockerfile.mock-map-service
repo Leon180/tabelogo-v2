@@ -1,0 +1,34 @@
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+RUN apk add --no-cache git make
+
+# Copy go mod files
+COPY cmd/mock-map-service/go.mod cmd/mock-map-service/go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY cmd/mock-map-service/ ./
+
+# Build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app/bin/mock-map-service .
+
+# Runtime stage
+FROM alpine:3.19
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /app
+
+# Copy binary
+COPY --from=builder /app/bin/mock-map-service .
+
+# Copy test data
+COPY --from=builder /app/testdata ./testdata
+
+EXPOSE 8085
+
+CMD ["./mock-map-service"]
