@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.5.0...tabelogo-v2/pkg-v0.6.0) (2025-12-24)
+
+
+### Features
+
+* **middleware:** update auth middleware with session validation (Phase 2.1) ([2c32769](https://github.com/Leon180/tabelogo-v2/commit/2c3276967393d18694aa04fbda97533e4b2e91ce))
+
+
+### Bug Fixes
+
+* **auth:** update tests for new JWT signature ([b8498cf](https://github.com/Leon180/tabelogo-v2/commit/b8498cfe4c3f53911eac4f5372a390f74a8355d0))
+* **middleware:** handle JSON string session format from Redis ([553ad08](https://github.com/Leon180/tabelogo-v2/commit/553ad08329c3bca215cec586db163022d5c6428b))
+
 ## [0.5.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.4.0...tabelogo-v2/pkg-v0.5.0) (2025-12-14)
 
 
