@@ -13,12 +13,21 @@ export function getPlacePhotoUrl(
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
-        console.error('Google Maps API key not configured');
+        console.error('❌ Google Maps API key not configured');
         return '';
     }
 
     // Google Places Photo API endpoint
-    return `https://places.googleapis.com/v1/${photoName}/media?key=${apiKey}&maxWidthPx=${maxWidth}&maxHeightPx=${maxHeight}`;
+    const url = `https://places.googleapis.com/v1/${photoName}/media?key=${apiKey}&maxWidthPx=${maxWidth}&maxHeightPx=${maxHeight}`;
+
+    console.log('🖼️ Generated photo URL:', {
+        photoName: photoName.substring(0, 50) + '...',
+        url: url.substring(0, 100) + '...',
+        hasKey: !!apiKey,
+        keyPrefix: apiKey?.substring(0, 10) + '...',
+    });
+
+    return url;
 }
 
 /**
