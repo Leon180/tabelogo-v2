@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.9.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.8.0...tabelogo-v2-v0.9.0) (2025-12-24)
+
+
+### Features
+
+* **auth:** implement full session management (Phase 1.3) ([0c015e9](https://github.com/Leon180/tabelogo-v2/commit/0c015e9b03998d606765e03f8e9e491d555d2031))
+* **auth:** implement full session management (Phase 1.3) ([82f7142](https://github.com/Leon180/tabelogo-v2/commit/82f7142e54d7a5fb057ac05de6c98519de516161))
+* **config:** migrate JWT configuration to environment variables (Phase 2.5) ([dba0650](https://github.com/Leon180/tabelogo-v2/commit/dba0650236bc00dbdb6c0fe4f11db1d594fb1dcb))
+* **docs:** add integration tests and deployment documentation (Phase 2.6) ([d64a955](https://github.com/Leon180/tabelogo-v2/commit/d64a9559d9f001798903303fcad214d65f24c805))
+* **frontend:** add authentication to Spider Service API client ([52435c3](https://github.com/Leon180/tabelogo-v2/commit/52435c37dc2317a1104e989fcb024d0375de4d84))
+* **frontend:** add register page and auth integration docs ([e8075da](https://github.com/Leon180/tabelogo-v2/commit/e8075da9c1398c5ce46e0538353ea21c75cc4214))
+* **map:** integrate auth middleware with Optional strategy (Phase 2.4) ([7dd3eff](https://github.com/Leon180/tabelogo-v2/commit/7dd3effe805253c20c8dbdfac6cd831cd3d11e98))
+* **middleware:** update auth middleware with session validation (Phase 2.1) ([2c32769](https://github.com/Leon180/tabelogo-v2/commit/2c3276967393d18694aa04fbda97533e4b2e91ce))
+* **prometheus:** add spider-service to scrape configuration ([a0580c5](https://github.com/Leon180/tabelogo-v2/commit/a0580c5ae4e09a43edff556764d60f7e4ad9f667))
+* **restaurant:** integrate auth middleware with mixed public/protected routes (Phase 2.3) ([7d40d50](https://github.com/Leon180/tabelogo-v2/commit/7d40d50160a59c5e62a63bb8648f382e0543209a))
+* **spider:** integrate auth middleware (Phase 2.2) ([e275bf4](https://github.com/Leon180/tabelogo-v2/commit/e275bf46443b0482f52dd0219f862b040ebb7037))
+* **spider:** standardize metrics naming and add labels ([c40ffba](https://github.com/Leon180/tabelogo-v2/commit/c40ffba5f17e2074069f9fbbbefc74abf1776375))
+
+
+### Bug Fixes
+
+* **auth:** update tests for new JWT signature ([b8498cf](https://github.com/Leon180/tabelogo-v2/commit/b8498cfe4c3f53911eac4f5372a390f74a8355d0))
+* correctly import param ([90e8835](https://github.com/Leon180/tabelogo-v2/commit/90e8835e2eb12b998ca8e7fab5b041dacbc522ea))
+* **docker-compose:** unify Redis DB to 0 for session sharing ([92f9e29](https://github.com/Leon180/tabelogo-v2/commit/92f9e295e667dcb2fe2d0782589b42f2a7ba9e5e))
+* **frontend:** add authentication to Restaurant Service API client ([f3290d2](https://github.com/Leon180/tabelogo-v2/commit/f3290d2f927a3a76c4fe76245f792161d657bc17))
+* **frontend:** add SSE authentication support for Spider Service ([5dfaaba](https://github.com/Leon180/tabelogo-v2/commit/5dfaaba1927b23cf0fadb77ca063a535281d3c41))
+* **frontend:** enhance Restaurant Service error handling for auth ([0dbd10c](https://github.com/Leon180/tabelogo-v2/commit/0dbd10c46358dba40ebe170df3ac7c945f1f0108))
+* **middleware:** handle JSON string session format from Redis ([553ad08](https://github.com/Leon180/tabelogo-v2/commit/553ad08329c3bca215cec586db163022d5c6428b))
+* **restaurant:** relax PATCH permission to authenticated users ([7f4c018](https://github.com/Leon180/tabelogo-v2/commit/7f4c0183a3a89f3eb50349a0f53dec2395cbb310))
+* **spider:** add Redis client provider to infrastructure module ([1175184](https://github.com/Leon180/tabelogo-v2/commit/11751847bc29e17fa4328962381f55ed076b377b))
+* **spider:** correct pkgconfig import alias ([809261a](https://github.com/Leon180/tabelogo-v2/commit/809261afa77e725576ac8dd9ea6419568765f22f))
+* **spider:** correct scraper type in JobProcessor provider ([a0ed055](https://github.com/Leon180/tabelogo-v2/commit/a0ed0556f07cd35e33ca6707a726524d44f1a094))
+* **spider:** inject workerCount from config into JobProcessor ([467a9ce](https://github.com/Leon180/tabelogo-v2/commit/467a9cefa0e99c99225191d9c0f5d984c6ae6f9c))
+* **spider:** remove duplicate wg.Done() in worker function ([fabab23](https://github.com/Leon180/tabelogo-v2/commit/fabab239362b6c708e6abce9fef2efe08765bf12))
+* **spider:** resolve WaitGroup negative counter panic ([6d355b5](https://github.com/Leon180/tabelogo-v2/commit/6d355b53375aaaa1d98ddf1e710d4cba8bca6824))
+* **spider:** use background context for job processor workers ([2056635](https://github.com/Leon180/tabelogo-v2/commit/20566355c8746782190911418761b5db7f8a9704))
+* **spider:** use GetRedisAddr() method for Redis client ([33a4909](https://github.com/Leon180/tabelogo-v2/commit/33a490904e973779a11f29228a46889f9a5c763e))
+* **spider:** use newJobProcessor provider in Module ([5d31754](https://github.com/Leon180/tabelogo-v2/commit/5d317548eb970716c7b337a79ca0db817277a2dc))
+
 ## [0.8.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.7.0...tabelogo-v2-v0.8.0) (2025-12-14)
 
 
