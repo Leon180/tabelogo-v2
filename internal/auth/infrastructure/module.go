@@ -21,6 +21,7 @@ var Module = fx.Module("auth.infrastructure",
 		NewRedis,
 		authpostgres.NewUserRepository,
 		authredis.NewTokenRepository,
+		authredis.NewSessionRepository, // Use Redis implementation
 	),
 )
 

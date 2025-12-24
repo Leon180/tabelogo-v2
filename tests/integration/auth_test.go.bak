@@ -60,11 +60,10 @@ func (suite *AuthIntegrationTestSuite) SetupSuite() {
 	// Setup service
 	userRepo := authpostgres.NewUserRepository(suite.db)
 	tokenRepo := authredis.NewTokenRepository(suite.redis)
-	sessionRepo := authredis.NewSessionRepository(suite.redis, nil) // nil logger for tests
 	jwtMaker, err := jwt.NewJWTMaker("test-secret-key-must-be-at-least-32-characters-long")
 	require.NoError(suite.T(), err)
 
-	suite.service = application.NewAuthService(userRepo, tokenRepo, sessionRepo, jwtMaker)
+	suite.service = application.NewAuthService(userRepo, tokenRepo, jwtMaker)
 }
 
 func (suite *AuthIntegrationTestSuite) TearDownSuite() {

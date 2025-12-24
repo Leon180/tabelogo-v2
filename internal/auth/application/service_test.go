@@ -79,19 +79,71 @@ func (m *MockTokenRepository) RevokeAllForUser(ctx context.Context, userID uuid.
 	return args.Error(0)
 }
 
-func setupTestService(t *testing.T) (application.AuthService, *MockUserRepository, *MockTokenRepository) {
+// Mock SessionRepository
+type MockSessionRepository struct {
+	mock.Mock
+}
+
+func (m *MockSessionRepository) Create(ctx context.Context, session *model.Session) error {
+	args := m.Called(ctx, session)
+	return args.Error(0)
+}
+
+func (m *MockSessionRepository) GetByID(ctx context.Context, sessionID uuid.UUID) (*model.Session, error) {
+	args := m.Called(ctx, sessionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Session), args.Error(1)
+}
+
+func (m *MockSessionRepository) GetUserSessions(ctx context.Context, userID uuid.UUID) ([]*model.Session, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.Session), args.Error(1)
+}
+
+func (m *MockSessionRepository) CountUserSessions(ctx context.Context, userID uuid.UUID) (int, error) {
+	args := m.Called(ctx, userID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockSessionRepository) UpdateActivity(ctx context.Context, sessionID uuid.UUID) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockSessionRepository) Revoke(ctx context.Context, sessionID uuid.UUID) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockSessionRepository) RevokeAllForUser(ctx context.Context, userID uuid.UUID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
+func (m *MockSessionRepository) DeleteExpired(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func setupTestService(t *testing.T) (application.AuthService, *MockUserRepository, *MockTokenRepository, *MockSessionRepository) {
 	userRepo := new(MockUserRepository)
 	tokenRepo := new(MockTokenRepository)
+	sessionRepo := new(MockSessionRepository)
 	jwtMaker, err := jwt.NewJWTMaker("test-secret-key-must-be-at-least-32-characters-long")
 	require.NoError(t, err)
 
-	service := application.NewAuthService(userRepo, tokenRepo, jwtMaker)
-	return service, userRepo, tokenRepo
+	service := application.NewAuthService(userRepo, tokenRepo, sessionRepo, jwtMaker)
+	return service, userRepo, tokenRepo, sessionRepo
 }
 
 func TestAuthService_Register(t *testing.T) {
 	t.Run("successful registration", func(t *testing.T) {
-		service, userRepo, _ := setupTestService(t)
+		service, userRepo, _, _ := setupTestService(t)
 		ctx := context.Background()
 
 		// Mock: user does not exist
@@ -109,7 +161,7 @@ func TestAuthService_Register(t *testing.T) {
 	})
 
 	t.Run("email already exists", func(t *testing.T) {
-		service, userRepo, _ := setupTestService(t)
+		service, userRepo, _, _ := setupTestService(t)
 		ctx := context.Background()
 
 		existingUser, _ := model.NewUser("test@example.com", "password", "existing")
@@ -126,7 +178,7 @@ func TestAuthService_Register(t *testing.T) {
 
 func TestAuthService_Login(t *testing.T) {
 	t.Run("successful login", func(t *testing.T) {
-		service, userRepo, tokenRepo := setupTestService(t)
+		service, userRepo, tokenRepo, sessionRepo := setupTestService(t)
 		ctx := context.Background()
 
 		// Create a user with known password
@@ -134,24 +186,27 @@ func TestAuthService_Login(t *testing.T) {
 		require.NoError(t, err)
 
 		userRepo.On("GetByEmail", ctx, "test@example.com").Return(user, nil)
+		sessionRepo.On("CountUserSessions", ctx, user.ID()).Return(0, nil)
+		sessionRepo.On("Create", ctx, mock.AnythingOfType("*model.Session")).Return(nil)
 		tokenRepo.On("Create", ctx, mock.AnythingOfType("*model.RefreshToken")).Return(nil)
 
-		accessToken, refreshToken, err := service.Login(ctx, "test@example.com", "password123")
+		accessToken, refreshToken, err := service.Login(ctx, "test@example.com", "password123", "test-device", "127.0.0.1", false)
 
 		require.NoError(t, err)
 		assert.NotEmpty(t, accessToken)
 		assert.NotEmpty(t, refreshToken)
 		userRepo.AssertExpectations(t)
+		sessionRepo.AssertExpectations(t)
 		tokenRepo.AssertExpectations(t)
 	})
 
 	t.Run("user not found", func(t *testing.T) {
-		service, userRepo, _ := setupTestService(t)
+		service, userRepo, _, _ := setupTestService(t)
 		ctx := context.Background()
 
 		userRepo.On("GetByEmail", ctx, "nonexistent@example.com").Return(nil, errors.ErrUserNotFound)
 
-		accessToken, refreshToken, err := service.Login(ctx, "nonexistent@example.com", "password123")
+		accessToken, refreshToken, err := service.Login(ctx, "nonexistent@example.com", "password123", "test-device", "127.0.0.1", false)
 
 		assert.Error(t, err)
 		assert.Empty(t, accessToken)
@@ -161,7 +216,7 @@ func TestAuthService_Login(t *testing.T) {
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
-		service, userRepo, _ := setupTestService(t)
+		service, userRepo, _, _ := setupTestService(t)
 		ctx := context.Background()
 
 		user, err := model.NewUser("test@example.com", "correctpassword", "testuser")
@@ -169,7 +224,7 @@ func TestAuthService_Login(t *testing.T) {
 
 		userRepo.On("GetByEmail", ctx, "test@example.com").Return(user, nil)
 
-		accessToken, refreshToken, err := service.Login(ctx, "test@example.com", "wrongpassword")
+		accessToken, refreshToken, err := service.Login(ctx, "test@example.com", "wrongpassword", "test-device", "127.0.0.1", false)
 
 		assert.Error(t, err)
 		assert.Empty(t, accessToken)
@@ -181,7 +236,7 @@ func TestAuthService_Login(t *testing.T) {
 
 func TestAuthService_ValidateToken(t *testing.T) {
 	t.Run("valid token", func(t *testing.T) {
-		service, userRepo, _ := setupTestService(t)
+		service, userRepo, _, sessionRepo := setupTestService(t)
 		ctx := context.Background()
 
 		// Create a user and generate a token
@@ -189,9 +244,13 @@ func TestAuthService_ValidateToken(t *testing.T) {
 		require.NoError(t, err)
 
 		jwtMaker, _ := jwt.NewJWTMaker("test-secret-key-must-be-at-least-32-characters-long")
-		token, _, err := jwtMaker.CreateToken(user.ID(), 15*time.Minute)
+		testSessionID := uuid.New()
+		token, _, err := jwtMaker.CreateToken(user.ID(), testSessionID, string(user.Role()), 15*time.Minute)
 		require.NoError(t, err)
 
+		// Mock session as valid
+		testSession := model.NewSession(user.ID(), "test-device", "127.0.0.1")
+		sessionRepo.On("GetByID", ctx, testSessionID).Return(testSession, nil)
 		userRepo.On("GetByID", ctx, user.ID()).Return(user, nil)
 
 		validatedUser, err := service.ValidateToken(ctx, token)
@@ -200,10 +259,11 @@ func TestAuthService_ValidateToken(t *testing.T) {
 		assert.NotNil(t, validatedUser)
 		assert.Equal(t, user.ID(), validatedUser.ID())
 		userRepo.AssertExpectations(t)
+		sessionRepo.AssertExpectations(t)
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
-		service, _, _ := setupTestService(t)
+		service, _, _, _ := setupTestService(t)
 		ctx := context.Background()
 
 		validatedUser, err := service.ValidateToken(ctx, "invalid-token")
@@ -215,7 +275,7 @@ func TestAuthService_ValidateToken(t *testing.T) {
 
 func TestAuthService_RefreshToken(t *testing.T) {
 	t.Run("successful token refresh", func(t *testing.T) {
-		service, userRepo, tokenRepo := setupTestService(t)
+		service, userRepo, tokenRepo, _ := setupTestService(t)
 		ctx := context.Background()
 
 		// Create a user
@@ -224,7 +284,8 @@ func TestAuthService_RefreshToken(t *testing.T) {
 
 		// Create a refresh token
 		jwtMaker, _ := jwt.NewJWTMaker("test-secret-key-must-be-at-least-32-characters-long")
-		oldRefreshToken, payload, err := jwtMaker.CreateToken(user.ID(), 24*time.Hour)
+		testSessionID := uuid.New()
+		oldRefreshToken, payload, err := jwtMaker.CreateToken(user.ID(), testSessionID, string(user.Role()), 24*time.Hour)
 		require.NoError(t, err)
 
 		refreshTokenEntity := model.NewRefreshToken(user.ID(), oldRefreshToken, payload.ExpiredAt)

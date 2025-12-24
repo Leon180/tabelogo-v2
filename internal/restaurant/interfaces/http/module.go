@@ -7,8 +7,10 @@ import (
 
 	"github.com/Leon180/tabelogo-v2/internal/restaurant/docs"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
+	"github.com/Leon180/tabelogo-v2/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
@@ -20,9 +22,15 @@ var Module = fx.Module("restaurant.http",
 	fx.Provide(
 		NewRestaurantHandler,
 		NewHTTPServer,
+		NewAuthMiddleware,
 	),
 	fx.Invoke(RegisterRoutes),
 )
+
+// NewAuthMiddleware creates auth middleware for Restaurant Service
+func NewAuthMiddleware(cfg *config.Config, redis *redis.Client, logger *zap.Logger) *middleware.AuthMiddleware {
+	return middleware.NewAuthMiddleware(cfg.JWT.Secret, redis, logger)
+}
 
 // NewHTTPServer creates a new HTTP server
 func NewHTTPServer(cfg *config.Config) *gin.Engine {
@@ -46,6 +54,7 @@ func RegisterRoutes(
 	lc fx.Lifecycle,
 	router *gin.Engine,
 	handler *RestaurantHandler,
+	authMW *middleware.AuthMiddleware,
 	cfg *config.Config,
 	logger *zap.Logger,
 ) {
@@ -72,23 +81,38 @@ func RegisterRoutes(
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
-		restaurants := v1.Group("/restaurants")
+		// Public restaurant routes (read-only, optional auth for tracking)
+		publicRestaurants := v1.Group("/restaurants")
+		publicRestaurants.Use(authMW.Optional()) // Track authenticated users but don't require auth
 		{
-			restaurants.POST("", handler.CreateRestaurant)
-			restaurants.GET("/:id", handler.GetRestaurant)
-			restaurants.PATCH("/:id", handler.UpdateRestaurant)
-			restaurants.GET("/search", handler.SearchRestaurants)
-			restaurants.GET("/quick-search/:place_id", handler.QuickSearchByPlaceID)
+			publicRestaurants.GET("/:id", handler.GetRestaurant)
+			publicRestaurants.GET("/search", handler.SearchRestaurants)
+			publicRestaurants.GET("/quick-search/:place_id", handler.QuickSearchByPlaceID)
 		}
 
-		// Favorite routes
+		// Protected restaurant routes (write operations, admin only)
+		protectedRestaurants := v1.Group("/restaurants")
+		protectedRestaurants.Use(authMW.RequireAuth())
+		{
+			// Admin-only operations
+			protectedRestaurants.POST("", authMW.RequireRole("admin"), handler.CreateRestaurant)
+			// Allow authenticated users to update restaurant details (e.g., Japanese name)
+			protectedRestaurants.PATCH("/:id", handler.UpdateRestaurant)
+		}
+
+		// Protected favorite routes (require authentication)
 		favorites := v1.Group("/favorites")
+		favorites.Use(authMW.RequireAuth())
 		{
 			favorites.POST("", handler.AddToFavorites)
 		}
 
-		// User favorites routes
-		v1.GET("/users/:userId/favorites", handler.GetUserFavorites)
+		// Protected user favorites routes (require authentication)
+		userFavorites := v1.Group("/users/:userId/favorites")
+		userFavorites.Use(authMW.RequireAuth())
+		{
+			userFavorites.GET("", handler.GetUserFavorites)
+		}
 	}
 
 	// Lifecycle hooks

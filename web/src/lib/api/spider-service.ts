@@ -9,6 +9,15 @@ const spiderClient = axios.create({
     },
 });
 
+// Add Authorization header to all requests
+spiderClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 // ============================================
 // TypeScript Interfaces
 // ============================================
@@ -83,7 +92,10 @@ spiderClient.interceptors.response.use(
         if (error.response) {
             const { status, data } = error.response;
 
-            if (status === 500) {
+            if (status === 401) {
+                // Authentication failed - token invalid or expired
+                throw new SpiderServiceError('Authentication required. Please login again.');
+            } else if (status === 500) {
                 throw new ScrapingError(data.message || 'Failed to scrape Tabelog');
             } else if (status === 400) {
                 throw new SpiderServiceError(data.message || 'Invalid request parameters');
@@ -133,94 +145,114 @@ export async function searchTabelog(
 
     console.log('🔄 Starting SSE stream for job:', jobId);
 
-    // Subscribe to SSE stream for real-time updates
-    return new Promise((resolve, reject) => {
-        const eventSource = new EventSource(
-            `http://localhost:18084/api/v1/spider/jobs/${jobId}/stream`
-        );
+    // Get token for SSE connection
+    const token = localStorage.getItem('access_token');
 
-        let lastStatus: JobStatusResponse | null = null;
+    // Use Fetch API with ReadableStream for SSE (supports Authorization headers)
+    return new Promise(async (resolve, reject) => {
+        try {
+            const fetchResponse = await fetch(
+                `http://localhost:18084/api/v1/spider/jobs/${jobId}/stream`,
+                {
+                    headers: {
+                        'Accept': 'text/event-stream',
+                        'Cache-Control': 'no-cache',
+                        'Authorization': token ? `Bearer ${token}` : '',
+                    },
+                }
+            );
 
-        // Handle status updates
-        eventSource.addEventListener('update', (event) => {
-            const status: JobStatusResponse = JSON.parse(event.data);
-            lastStatus = status;
-
-            console.log('📡 SSE update:', status.status);
-
-            // Update progress
-            if (onProgress) {
-                onProgress(status.status);
+            if (!fetchResponse.ok) {
+                throw new SpiderServiceError(`SSE connection failed: ${fetchResponse.status}`);
             }
 
-            // Handle completion
-            if (status.status === 'COMPLETED') {
-                eventSource.close();
-                console.log('✅ Scraping completed, got', status.results?.length, 'results');
-                resolve({
-                    google_id: status.google_id,
-                    restaurants: status.results || [],
-                    total_found: status.results?.length || 0,
-                });
-            } else if (status.status === 'FAILED') {
-                eventSource.close();
-                console.error('❌ Scraping failed:', status.error);
-                reject(new ScrapingError(status.error || 'Scraping failed'));
+            if (!fetchResponse.body) {
+                throw new SpiderServiceError('Response body is null');
             }
-        });
 
-        // Handle completion event
-        eventSource.addEventListener('done', (event) => {
-            const data = JSON.parse(event.data);
-            console.log('✅ Job done:', data.message);
-            eventSource.close();
+            const reader = fetchResponse.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let lastStatus: JobStatusResponse | null = null;
 
-            // If we have status from updates, use it
-            if (lastStatus && lastStatus.status === 'COMPLETED') {
-                resolve({
-                    google_id: lastStatus.google_id,
-                    restaurants: lastStatus.results || [],
-                    total_found: lastStatus.results?.length || 0,
-                });
-            }
-        });
+            const processLine = (line: string) => {
+                if (line.startsWith('data:')) {
+                    const data = line.slice(5).trim();
+                    try {
+                        const parsed = JSON.parse(data);
 
-        // Handle error events
-        eventSource.addEventListener('error', (event: MessageEvent) => {
-            try {
-                const errorData = JSON.parse(event.data);
-                eventSource.close();
-                console.error('❌ SSE error event:', errorData);
-                reject(new SpiderServiceError(errorData?.error || 'SSE error'));
-            } catch {
-                // Ignore parse errors for error events
-            }
-        });
+                        if (parsed.job_id) {
+                            const status: JobStatusResponse = parsed;
+                            lastStatus = status;
 
-        // Handle connection errors
-        eventSource.onerror = (error) => {
-            eventSource.close();
-            console.error('❌ SSE connection error:', error);
+                            console.log('📡 SSE update:', status.status);
 
-            // If we already have completed status, resolve instead of reject
-            if (lastStatus?.status === 'COMPLETED') {
-                resolve({
-                    google_id: lastStatus.google_id,
-                    restaurants: lastStatus.results || [],
-                    total_found: lastStatus.results?.length || 0,
-                });
-            } else {
-                reject(new SpiderServiceError('SSE connection failed'));
-            }
-        };
+                            if (onProgress) {
+                                onProgress(status.status);
+                            }
 
-        // Timeout after 2 minutes
-        setTimeout(() => {
-            if (eventSource.readyState !== EventSource.CLOSED) {
-                eventSource.close();
-                reject(new SpiderServiceError('SSE timeout after 2 minutes'));
-            }
-        }, 120000);
+                            if (status.status === 'COMPLETED') {
+                                console.log('✅ Scraping completed, got', status.results?.length, 'results');
+                                reader.cancel();
+                                resolve({
+                                    google_id: status.google_id,
+                                    restaurants: status.results || [],
+                                    total_found: status.results?.length || 0,
+                                });
+                            } else if (status.status === 'FAILED') {
+                                console.error('❌ Scraping failed:', status.error);
+                                reader.cancel();
+                                reject(new ScrapingError(status.error || 'Scraping failed'));
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse SSE data:', e);
+                    }
+                }
+            };
+
+            // Read stream
+            const readStream = async () => {
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+
+                        if (done) {
+                            console.log('📡 SSE stream ended');
+                            if (lastStatus?.status === 'COMPLETED') {
+                                resolve({
+                                    google_id: lastStatus.google_id,
+                                    restaurants: lastStatus.results || [],
+                                    total_found: lastStatus.results?.length || 0,
+                                });
+                            } else {
+                                reject(new ScrapingError('Stream ended without completion'));
+                            }
+                            break;
+                        }
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (const line of lines) {
+                            if (line.trim()) {
+                                processLine(line);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ SSE stream error:', error);
+                    reject(new ScrapingError('Stream reading failed'));
+                }
+            };
+
+            readStream();
+
+        } catch (error: any) {
+            console.error('❌ Failed to establish SSE connection:', error);
+            reject(new SpiderServiceError(error.message || 'Failed to connect to SSE stream'));
+        }
     });
 }
 

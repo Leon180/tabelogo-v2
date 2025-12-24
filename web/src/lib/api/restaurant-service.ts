@@ -48,6 +48,15 @@ const restaurantClient = axios.create({
     timeout: 10000,
 });
 
+// Add Authorization header to all requests
+restaurantClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 // Response interceptor for error handling
 restaurantClient.interceptors.response.use(
     (response) => response,
@@ -55,7 +64,13 @@ restaurantClient.interceptors.response.use(
         if (error.response) {
             const { status, data } = error.response;
 
-            if (status === 404) {
+            if (status === 401) {
+                console.error('Authentication required:', data);
+                throw new Error('Authentication required. Please login again.');
+            } else if (status === 403) {
+                console.error('Permission denied:', data);
+                throw new Error('Permission denied. Admin access required.');
+            } else if (status === 404) {
                 console.warn('Restaurant not found:', data);
                 throw new NotFoundError(data.message);
             } else if (status === 400) {

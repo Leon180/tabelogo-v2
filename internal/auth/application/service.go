@@ -8,32 +8,43 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/auth/domain/model"
 	"github.com/Leon180/tabelogo-v2/internal/auth/domain/repository"
 	"github.com/Leon180/tabelogo-v2/pkg/jwt"
+	"github.com/google/uuid"
 )
+
+// MaxSessionsPerUser defines the maximum number of concurrent sessions per user
+const MaxSessionsPerUser = 5
 
 // AuthService defines the application service interface
 type AuthService interface {
 	Register(ctx context.Context, email, password, username string) (*model.User, error)
-	Login(ctx context.Context, email, password string) (string, string, error) // returns access token, refresh token
+	Login(ctx context.Context, email, password, deviceInfo, ipAddress string, rememberMe bool) (string, string, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	ValidateToken(ctx context.Context, token string) (*model.User, error)
+	Logout(ctx context.Context, sessionID uuid.UUID) error
+	LogoutAll(ctx context.Context, userID uuid.UUID) error
+	GetActiveSessions(ctx context.Context, userID uuid.UUID) ([]*model.Session, error)
+	RevokeSession(ctx context.Context, sessionID uuid.UUID) error
 }
 
 type authService struct {
-	userRepo  repository.UserRepository
-	tokenRepo repository.TokenRepository
-	jwtMaker  jwt.Maker
+	userRepo    repository.UserRepository
+	tokenRepo   repository.TokenRepository
+	sessionRepo repository.SessionRepository // NEW: Session repository
+	jwtMaker    jwt.Maker
 }
 
 // NewAuthService creates a new auth service
 func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenRepo repository.TokenRepository,
+	sessionRepo repository.SessionRepository, // NEW: Session repository
 	jwtMaker jwt.Maker,
 ) AuthService {
 	return &authService{
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
-		jwtMaker:  jwtMaker,
+		userRepo:    userRepo,
+		tokenRepo:   tokenRepo,
+		sessionRepo: sessionRepo, // NEW
+		jwtMaker:    jwtMaker,
 	}
 }
 
@@ -58,38 +69,81 @@ func (s *authService) Register(ctx context.Context, email, password, username st
 	return user, nil
 }
 
-func (s *authService) Login(ctx context.Context, email, password string) (string, string, error) {
-	// Get user
+func (s *authService) Login(ctx context.Context, email, password, deviceInfo, ipAddress string, rememberMe bool) (string, string, error) {
+	// 1. Validate credentials
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
 		return "", "", errors.ErrUserNotFound
 	}
 
-	// Check password
 	if !user.CheckPassword(password) {
 		return "", "", errors.ErrInvalidPassword
 	}
 
-	// Generate tokens
-	accessToken, _, err := s.jwtMaker.CreateToken(user.ID(), 15*time.Minute)
+	// 2. Check session limit and enforce device limit
+	sessionCount, err := s.sessionRepo.CountUserSessions(ctx, user.ID())
 	if err != nil {
 		return "", "", err
 	}
 
-	refreshToken, payload, err := s.jwtMaker.CreateToken(user.ID(), 24*time.Hour)
+	if sessionCount >= MaxSessionsPerUser {
+		// Revoke oldest session to make room
+		sessions, err := s.sessionRepo.GetUserSessions(ctx, user.ID())
+		if err != nil {
+			return "", "", err
+		}
+
+		if len(sessions) > 0 {
+			// Find and revoke oldest session
+			oldest := sessions[0]
+			for _, sess := range sessions {
+				if sess.CreatedAt().Before(oldest.CreatedAt()) {
+					oldest = sess
+				}
+			}
+			if err := s.sessionRepo.Revoke(ctx, oldest.ID()); err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	// 3. Create session (standard or remember-me)
+	var session *model.Session
+	if rememberMe {
+		session = model.NewRememberMeSession(user.ID(), deviceInfo, ipAddress)
+	} else {
+		session = model.NewSession(user.ID(), deviceInfo, ipAddress)
+	}
+
+	if err := s.sessionRepo.Create(ctx, session); err != nil {
+		return "", "", err
+	}
+
+	// 4. Generate tokens with session_id
+	accessTokenDuration := 15 * time.Minute
+	refreshTokenDuration := time.Until(session.ExpiresAt())
+
+	accessToken, _, err := s.jwtMaker.CreateToken(
+		user.ID(),
+		session.ID(),
+		string(user.Role()),
+		accessTokenDuration,
+	)
 	if err != nil {
 		return "", "", err
 	}
 
-	// Store refresh token
-	// Note: We need to hash the refresh token before storing it for security,
-	// but for simplicity here we store the token hash (which is usually the token itself or a hash of it).
-	// The domain model expects a tokenHash. Let's assume the token string itself is the "hash" for now,
-	// or we hash it. Ideally, we store a hash of the token so if DB is leaked, tokens are safe.
-	// But we need to return the raw token to the user.
-	// Let's use the token ID or the token string as the hash key.
-	// For now, let's just use the token string as the hash.
+	refreshToken, payload, err := s.jwtMaker.CreateToken(
+		user.ID(),
+		session.ID(),
+		string(user.Role()),
+		refreshTokenDuration,
+	)
+	if err != nil {
+		return "", "", err
+	}
 
+	// 5. Store refresh token
 	rtEntity := model.NewRefreshToken(user.ID(), refreshToken, payload.ExpiredAt)
 	if err := s.tokenRepo.Create(ctx, rtEntity); err != nil {
 		return "", "", err
@@ -135,12 +189,14 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (st
 	// Actually, we should implement Revoke in Redis repo properly if we want rotation.
 	// For now, let's just issue new tokens.
 
-	accessToken, _, err := s.jwtMaker.CreateToken(user.ID(), 15*time.Minute)
+	// TODO: Replace with actual session management in next phase
+	temporarySessionID := payload.SessionID // Use existing session ID from refresh token
+	accessToken, _, err := s.jwtMaker.CreateToken(user.ID(), temporarySessionID, string(user.Role()), 15*time.Minute)
 	if err != nil {
 		return "", "", err
 	}
 
-	newRefreshToken, newPayload, err := s.jwtMaker.CreateToken(user.ID(), 24*time.Hour)
+	newRefreshToken, newPayload, err := s.jwtMaker.CreateToken(user.ID(), temporarySessionID, string(user.Role()), 24*time.Hour)
 	if err != nil {
 		return "", "", err
 	}
@@ -154,15 +210,53 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (st
 }
 
 func (s *authService) ValidateToken(ctx context.Context, token string) (*model.User, error) {
+	// 1. Verify JWT
 	payload, err := s.jwtMaker.VerifyToken(token)
 	if err != nil {
 		return nil, err
 	}
 
+	// 2. Check session is active
+	session, err := s.sessionRepo.GetByID(ctx, payload.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	if session == nil {
+		return nil, errors.ErrSessionNotFound
+	}
+
+	if !session.IsValid() {
+		if session.IsExpired() {
+			return nil, errors.ErrSessionExpired
+		}
+		return nil, errors.ErrSessionRevoked
+	}
+
+	// 3. Get user
 	user, err := s.userRepo.GetByID(ctx, payload.UserID)
 	if err != nil {
 		return nil, err
 	}
 
 	return user, nil
+}
+
+// Logout revokes a specific session
+func (s *authService) Logout(ctx context.Context, sessionID uuid.UUID) error {
+	return s.sessionRepo.Revoke(ctx, sessionID)
+}
+
+// LogoutAll revokes all sessions for a user
+func (s *authService) LogoutAll(ctx context.Context, userID uuid.UUID) error {
+	return s.sessionRepo.RevokeAllForUser(ctx, userID)
+}
+
+// GetActiveSessions retrieves all active sessions for a user
+func (s *authService) GetActiveSessions(ctx context.Context, userID uuid.UUID) ([]*model.Session, error) {
+	return s.sessionRepo.GetUserSessions(ctx, userID)
+}
+
+// RevokeSession revokes a specific session (alias for Logout)
+func (s *authService) RevokeSession(ctx context.Context, sessionID uuid.UUID) error {
+	return s.sessionRepo.Revoke(ctx, sessionID)
 }

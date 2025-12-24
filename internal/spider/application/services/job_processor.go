@@ -60,8 +60,8 @@ func (p *JobProcessor) Start(ctx context.Context) {
 	for i := 0; i < p.workerCount; i++ {
 		p.wg.Add(1)
 		go func(workerID int) {
-			defer p.wg.Done()
 			defer func() {
+				// Recover from panic first
 				if r := recover(); r != nil {
 					p.logger.Error("Worker panic recovered",
 						zap.Int("worker_id", workerID),
@@ -70,7 +70,10 @@ func (p *JobProcessor) Start(ctx context.Context) {
 					)
 					p.metrics.RecordScrapeError("worker_panic")
 				}
+				// Always call Done() last, after panic recovery
+				p.wg.Done()
 			}()
+
 			p.worker(ctx, workerID)
 		}(i)
 	}
@@ -120,8 +123,7 @@ func (p *JobProcessor) SubmitJob(ctx context.Context, jobID models.JobID) error 
 
 // worker processes jobs from the queue
 func (p *JobProcessor) worker(ctx context.Context, workerID int) {
-	defer p.wg.Done()
-
+	// Note: wg.Done() is called in the goroutine's defer, not here
 	logger := p.logger.With(zap.Int("worker_id", workerID))
 	logger.Info("Worker started")
 
@@ -219,7 +221,7 @@ func (p *JobProcessor) processJob(ctx context.Context, jobID models.JobID, logge
 	// Record metrics
 	p.metrics.RecordJob("completed")
 	p.metrics.RecordJobDuration("completed", time.Since(jobStartTime).Seconds())
-	p.metrics.RecordRestaurantsScraped(len(resultPtrs))
+	p.metrics.RecordRestaurantsScraped("success", len(resultPtrs))
 
 	// Cache results
 	logger.Info("Attempting to cache results",

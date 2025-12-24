@@ -451,13 +451,40 @@ curl http://localhost:8083/metrics
 
 ### Metrics
 
-Prometheus metrics available at `/metrics`:
+The Spider Service exposes 14 Prometheus metrics for comprehensive monitoring. All metrics are available at the `/metrics` endpoint.
 
-- `spider_scrape_requests_total` - Total scrape requests
-- `spider_scrape_duration_seconds` - Scrape duration histogram
-- `spider_cache_hits_total` - Cache hit counter
-- `spider_cache_misses_total` - Cache miss counter
-- `spider_active_jobs` - Currently active jobs
+**Metric Categories**:
+- **Scraping Metrics** (4): Track restaurant scraping operations
+- **Job Processing Metrics** (4): Monitor background job processing  
+- **Cache Metrics** (3): Measure cache performance
+- **Circuit Breaker Metrics** (2): Monitor circuit breaker state
+
+**Key Metrics**:
+- `spider_scrape_requests_total{status}` - Total scrape requests by status
+- `spider_scrape_duration_seconds{operation,status}` - Scrape duration histogram
+- `spider_restaurants_scraped_total{status}` - Restaurants scraped by status
+- `spider_jobs_total{status}` - Job processing by status
+- `spider_cache_hits_total{cache_type}` - Cache hits by type
+- `spider_cache_misses_total{cache_type}` - Cache misses by type
+- `spider_circuit_breaker_state{circuit}` - Circuit breaker state
+
+**Example Queries**:
+```promql
+# Success rate
+rate(spider_scrape_requests_total{status="success"}[5m]) / 
+rate(spider_scrape_requests_total[5m])
+
+# 95th percentile latency
+histogram_quantile(0.95, 
+  rate(spider_scrape_duration_seconds_bucket[5m])
+)
+
+# Cache hit rate
+rate(spider_cache_hits_total[5m]) / 
+(rate(spider_cache_hits_total[5m]) + rate(spider_cache_misses_total[5m]))
+```
+
+📖 **For complete metrics documentation, PromQL examples, and alerting recommendations, see [docs/metrics.md](./docs/metrics.md)**
 
 ### Logging
 
@@ -491,6 +518,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Architecture Guide](./docs/architecture.md)
 - [API Reference](./docs/api.md)
+- [Metrics Documentation](./docs/metrics.md)
 - [Testing Guide](./docs/testing.md)
 - [Deployment Guide](./docs/deployment.md)
 

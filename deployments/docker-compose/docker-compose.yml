@@ -134,7 +134,7 @@ services:
       DB_SSLMODE: disable
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: change-me-in-production-must-be-at-least-32-characters-long
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-must-be-at-least-32-characters-long}
       JWT_ACCESS_TOKEN_EXPIRE: 15m
       JWT_REFRESH_TOKEN_EXPIRE: 168h
       KAFKA_BROKERS: kafka:9092
@@ -178,12 +178,12 @@ services:
       DB_CONN_MAX_LIFETIME: 1h
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_DB: 1
+      REDIS_DB: 0
       # Map Service Integration
       MAP_SERVICE_GRPC_ADDR: "map-service:19083"
       MAP_SERVICE_TIMEOUT: "10s"
       DATA_FRESHNESS_TTL: "259200s" # 3 days
-      JWT_SECRET: change-me-in-production-must-be-at-least-32-characters-long
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-must-be-at-least-32-characters-long}
       JWT_ACCESS_TOKEN_EXPIRE: 15m
       JWT_REFRESH_TOKEN_EXPIRE: 168h
       KAFKA_BROKERS: kafka:9092
@@ -220,7 +220,7 @@ services:
       DB_NAME: map_db_placeholder
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_DB: 5
+      REDIS_DB: 0
       REDIS_PASSWORD: ""
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
       CACHE_PLACE_DETAILS_TTL: 3600
@@ -259,7 +259,10 @@ services:
       DB_NAME: spider_db_placeholder
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_DB: 2
+      REDIS_DB: 0
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-must-be-at-least-32-characters-long}
+      JWT_ACCESS_TOKEN_EXPIRE: 15m
+      JWT_REFRESH_TOKEN_EXPIRE: 168h
     depends_on:
       redis:
         condition: service_healthy

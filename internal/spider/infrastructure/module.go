@@ -9,6 +9,7 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/metrics"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/persistence"
 	"github.com/Leon180/tabelogo-v2/internal/spider/infrastructure/scraper"
+	pkgconfig "github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/redis/go-redis/v9"
 	"github.com/sony/gobreaker"
 	"go.uber.org/fx"
@@ -22,6 +23,9 @@ var Module = fx.Module("spider.infrastructure",
 
 	// Metrics
 	fx.Provide(metrics.NewSpiderMetrics),
+
+	// Redis client
+	fx.Provide(newRedisClient),
 
 	// Persistence
 	fx.Provide(
@@ -42,9 +46,18 @@ var Module = fx.Module("spider.infrastructure",
 	),
 )
 
+// newRedisClient creates a Redis client from main config
+func newRedisClient(cfg *pkgconfig.Config) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     cfg.GetRedisAddr(), // Use helper method that formats Host:Port
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+}
+
 // newRedisResultCache creates a Redis result cache with configured TTL
 func newRedisResultCache(client *redis.Client, logger *zap.Logger, cfg *config.SpiderConfig) repositories.ResultCacheRepository {
-	return persistence.NewRedisResultCache(client, logger, cfg.CacheTTL)
+	return persistence.NewRedisResultCache(client, cfg.CacheTTL, logger)
 }
 
 // newCircuitBreaker creates a circuit breaker with configured settings

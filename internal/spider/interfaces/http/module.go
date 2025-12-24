@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	"github.com/Leon180/tabelogo-v2/pkg/config"
+	"github.com/Leon180/tabelogo-v2/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -18,9 +20,15 @@ var Module = fx.Module("spider.http",
 		NewSpiderHandler,
 		NewSSEHandler,
 		NewHTTPServer,
+		NewAuthMiddleware,
 	),
 	fx.Invoke(RegisterRoutes),
 )
+
+// NewAuthMiddleware creates auth middleware for Spider Service
+func NewAuthMiddleware(cfg *config.Config, redis *redis.Client, logger *zap.Logger) *middleware.AuthMiddleware {
+	return middleware.NewAuthMiddleware(cfg.JWT.Secret, redis, logger)
+}
 
 // NewHTTPServer creates a new HTTP server
 func NewHTTPServer(cfg *config.Config) *gin.Engine {
@@ -58,6 +66,7 @@ func RegisterRoutes(
 	router *gin.Engine,
 	handler *SpiderHandler,
 	sseHandler *SSEHandler,
+	authMW *middleware.AuthMiddleware,
 	cfg *config.Config,
 	logger *zap.Logger,
 ) {
@@ -69,32 +78,33 @@ func RegisterRoutes(
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 	})
 
-	// API routes
+	// API routes - All protected with authentication
 	api := router.Group("/api/v1/spider")
+	api.Use(authMW.RequireAuth()) // Apply auth to all spider routes
 	{
 		// CORS preflight
 		api.OPTIONS("/scrape", func(c *gin.Context) {
 			c.Header("Access-Control-Allow-Origin", "*")
 			c.Header("Access-Control-Allow-Methods", "POST, OPTIONS")
-			c.Header("Access-Control-Allow-Headers", "Content-Type")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			c.Status(http.StatusNoContent)
 		})
 
 		api.OPTIONS("/jobs/:job_id", func(c *gin.Context) {
 			c.Header("Access-Control-Allow-Origin", "*")
 			c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
-			c.Header("Access-Control-Allow-Headers", "Content-Type")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			c.Status(http.StatusNoContent)
 		})
 
 		api.OPTIONS("/jobs/:job_id/stream", func(c *gin.Context) {
 			c.Header("Access-Control-Allow-Origin", "*")
 			c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
-			c.Header("Access-Control-Allow-Headers", "Content-Type, Cache-Control")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Cache-Control, Authorization")
 			c.Status(http.StatusNoContent)
 		})
 
-		// Actual endpoints
+		// Actual endpoints (all require authentication)
 		api.POST("/scrape", handler.Scrape)
 		api.GET("/jobs/:job_id", handler.GetJobStatus)
 		api.GET("/jobs/:job_id/stream", sseHandler.StreamJobStatus) // SSE endpoint

@@ -86,7 +86,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
+	// Extract device info from User-Agent header
+	deviceInfo := c.GetHeader("User-Agent")
+	if deviceInfo == "" {
+		deviceInfo = "unknown"
+	}
+
+	// Extract IP address
+	ipAddress := c.ClientIP()
+
+	accessToken, refreshToken, err := h.service.Login(
+		c.Request.Context(),
+		req.Email,
+		req.Password,
+		deviceInfo,
+		ipAddress,
+		req.RememberMe,
+	)
 	if err != nil {
 		if err == errors.ErrUserNotFound || err == errors.ErrInvalidPassword {
 			c.JSON(http.StatusUnauthorized, ErrorResponse{

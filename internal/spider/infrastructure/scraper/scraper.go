@@ -36,11 +36,15 @@ func NewScraper(logger *zap.Logger, metrics *metrics.SpiderMetrics, config *mode
 }
 
 // ScrapeRestaurants scrapes Tabelog for restaurants
-func (s *Scraper) ScrapeRestaurants(area, placeName string) ([]models.TabelogRestaurant, error) {
+func (s *Scraper) ScrapeRestaurants(area, placeName string) (restaurants []models.TabelogRestaurant, err error) {
 	// Track scrape duration
 	startTime := time.Now()
 	defer func() {
-		s.metrics.RecordScrapeDuration("search", time.Since(startTime).Seconds())
+		status := "success"
+		if err != nil {
+			status = "failure"
+		}
+		s.metrics.RecordScrapeDuration("search", status, time.Since(startTime).Seconds())
 	}()
 
 	s.logger.Info("Starting restaurant scrape",
@@ -92,7 +96,11 @@ func (s *Scraper) ScrapeRestaurants(area, placeName string) ([]models.TabelogRes
 			// Track detail scrape duration
 			detailStart := time.Now()
 			restaurant, err := s.scrapeRestaurantDetails(url)
-			s.metrics.RecordScrapeDuration("details", time.Since(detailStart).Seconds())
+			detailStatus := "success"
+			if err != nil {
+				detailStatus = "failure"
+			}
+			s.metrics.RecordScrapeDuration("details", detailStatus, time.Since(detailStart).Seconds())
 
 			if err != nil {
 				s.logger.Error("Failed to scrape restaurant details",

@@ -71,7 +71,7 @@ func (h *SpiderHandler) Scrape(c *gin.Context) {
 	cached, err := h.resultCache.Get(c.Request.Context(), req.GoogleID)
 	if err == nil && cached != nil {
 		// Record cache hit
-		h.metrics.RecordCacheHit()
+		h.metrics.RecordCacheHit("result")
 		h.metrics.RecordScrapeRequest("cached")
 
 		h.logger.Info("Returning cached results",
@@ -105,7 +105,7 @@ func (h *SpiderHandler) Scrape(c *gin.Context) {
 	}
 
 	// Record cache miss
-	h.metrics.RecordCacheMiss()
+	h.metrics.RecordCacheMiss("result")
 
 	// Start scraping job
 	resp, err := h.scrapeUseCase.Execute(c.Request.Context(), usecases.ScrapeRestaurantRequest{

@@ -17,12 +17,14 @@ var (
 type Payload struct {
 	ID        uuid.UUID `json:"id"`
 	UserID    uuid.UUID `json:"user_id"`
+	SessionID uuid.UUID `json:"session_id"` // NEW: Session ID for session tracking
+	Role      string    `json:"role"`       // NEW: User role for authorization
 	IssuedAt  time.Time `json:"issued_at"`
 	ExpiredAt time.Time `json:"expired_at"`
 }
 
 // NewPayload creates a new token payload with a specific duration
-func NewPayload(userID uuid.UUID, duration time.Duration) (*Payload, error) {
+func NewPayload(userID, sessionID uuid.UUID, role string, duration time.Duration) (*Payload, error) {
 	tokenID, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
@@ -31,6 +33,8 @@ func NewPayload(userID uuid.UUID, duration time.Duration) (*Payload, error) {
 	payload := &Payload{
 		ID:        tokenID,
 		UserID:    userID,
+		SessionID: sessionID,
+		Role:      role,
 		IssuedAt:  time.Now(),
 		ExpiredAt: time.Now().Add(duration),
 	}
@@ -64,7 +68,7 @@ func (payload *Payload) GetAudience() (jwt.ClaimStrings, error) {
 
 // Maker is an interface for managing tokens
 type Maker interface {
-	CreateToken(userID uuid.UUID, duration time.Duration) (string, *Payload, error)
+	CreateToken(userID, sessionID uuid.UUID, role string, duration time.Duration) (string, *Payload, error)
 	VerifyToken(token string) (*Payload, error)
 }
 
@@ -80,9 +84,9 @@ func NewJWTMaker(secretKey string) (Maker, error) {
 	return &JWTMaker{secretKey: secretKey}, nil
 }
 
-// CreateToken creates a new token for a specific username and duration
-func (maker *JWTMaker) CreateToken(userID uuid.UUID, duration time.Duration) (string, *Payload, error) {
-	payload, err := NewPayload(userID, duration)
+// CreateToken creates a new token for a specific user, session, and duration
+func (maker *JWTMaker) CreateToken(userID, sessionID uuid.UUID, role string, duration time.Duration) (string, *Payload, error) {
+	payload, err := NewPayload(userID, sessionID, role, duration)
 	if err != nil {
 		return "", payload, err
 	}

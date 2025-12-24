@@ -29,6 +29,11 @@ func NewSSEHandler(jobRepo repositories.JobRepository, logger *zap.Logger) *SSEH
 // StreamJobStatus streams job status updates via SSE
 // GET /api/v1/spider/jobs/:job_id/stream
 func (h *SSEHandler) StreamJobStatus(c *gin.Context) {
+	jobIDStr := c.Param("job_id")
+
+	h.logger.Info("SSE stream requested",
+		zap.String("job_id", jobIDStr),
+	)
 	defer func() {
 		if r := recover(); r != nil {
 			h.logger.Error("SSE handler panic recovered",
@@ -40,7 +45,6 @@ func (h *SSEHandler) StreamJobStatus(c *gin.Context) {
 		}
 	}()
 
-	jobIDStr := c.Param("job_id")
 	jobID, err := models.ParseJobID(jobIDStr)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "invalid job_id"})
