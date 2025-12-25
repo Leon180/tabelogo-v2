@@ -226,6 +226,9 @@ services:
       CACHE_PLACE_DETAILS_TTL: 3600
       RATE_LIMIT_PER_MINUTE: 60
       GIN_MODE: release
+      # Mock Mode (set to true to use mock service)
+      USE_MOCK_API: "${USE_MOCK_API:-false}"
+      MOCK_API_BASE_URL: "http://mock-map-service:8085"
     ports:
       - "8081:8081" # HTTP
       - "19083:19083" # gRPC
@@ -275,6 +278,30 @@ services:
     restart: unless-stopped
     networks:
       - tabelogo-network
+
+  # Mock Map Service (for testing)
+  mock-map-service:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.mock-map-service
+    container_name: tabelogo-mock-map-service
+    environment:
+      # Fast mode (default - for K6 testing)
+      MOCK_LATENCY_ENABLED: "false"
+      # Realistic mode (uncomment for integration testing)
+      # MOCK_LATENCY_ENABLED: "true"
+      # MOCK_LATENCY_MIN_MS: "100"
+      # MOCK_LATENCY_MAX_MS: "300"
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8085/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - tabelogo-network
+    restart: unless-stopped
 
   # Booking Service (Placeholder - to be implemented)
   # booking-service:
