@@ -13,13 +13,13 @@ import (
 
 // AdvanceSearchUseCase handles advance search business logic
 type AdvanceSearchUseCase struct {
-	placesClient *external.GooglePlacesClient
+	placesClient external.PlacesClient
 	logger       *zap.Logger
 }
 
 // NewAdvanceSearchUseCase creates a new AdvanceSearchUseCase
 func NewAdvanceSearchUseCase(
-	placesClient *external.GooglePlacesClient,
+	placesClient external.PlacesClient,
 	logger *zap.Logger,
 ) *AdvanceSearchUseCase {
 	return &AdvanceSearchUseCase{
