@@ -17,7 +17,7 @@ var Module = fx.Module("map.infrastructure",
 	fx.Provide(
 		NewRedis,
 		cache.NewPlaceCache,
-		external.NewGooglePlacesClient,
+		external.NewPlacesClient, // Factory that returns either Google or Mock client
 	),
 )
 
