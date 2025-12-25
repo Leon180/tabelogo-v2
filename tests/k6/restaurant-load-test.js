@@ -35,31 +35,56 @@ export const options = {
 
 // 設置階段 - 獲取認證 token
 export function setup() {
-    // 嘗試註冊新用戶
+    // 註冊新用戶
     const timestamp = Date.now();
+    const email = `k6test${timestamp}@example.com`;
+    const username = `k6test${timestamp}`;
+    const password = 'Test1234!';
+
     const registerRes = http.post(
         'http://localhost:8080/api/v1/auth/register',
         JSON.stringify({
-            email: `k6test${timestamp}@example.com`,
-            username: `k6test${timestamp}`,
-            password: 'Test1234!',
+            email: email,
+            username: username,
+            password: password,
         }),
         {
             headers: { 'Content-Type': 'application/json' },
         }
     );
 
-    let token;
-    if (registerRes.status === 201 || registerRes.status === 200) {
-        const body = registerRes.json();
-        token = body.access_token;
-    } else {
+    if (registerRes.status !== 201 && registerRes.status !== 200) {
         console.error(`Registration failed with status ${registerRes.status}`);
         console.error(`Response: ${registerRes.body}`);
         throw new Error('Failed to register user');
     }
 
+    console.log(`User registered: ${email}`);
+
+    // 登錄獲取 token
+    const loginRes = http.post(
+        'http://localhost:8080/api/v1/auth/login',
+        JSON.stringify({
+            email: email,
+            password: password,
+        }),
+        {
+            headers: { 'Content-Type': 'application/json' },
+        }
+    );
+
+    if (loginRes.status !== 200) {
+        console.error(`Login failed with status ${loginRes.status}`);
+        console.error(`Response: ${loginRes.body}`);
+        throw new Error('Failed to login');
+    }
+
+    const body = loginRes.json();
+    const token = body.access_token;
+
     if (!token) {
+        console.error('Token is null or undefined');
+        console.error(`Login response: ${loginRes.body}`);
         throw new Error('Token is null or undefined');
     }
 
