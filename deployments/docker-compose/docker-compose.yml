@@ -227,8 +227,8 @@ services:
       RATE_LIMIT_PER_MINUTE: 60
       GIN_MODE: release
       # Mock Mode (set to true to use mock service)
-      USE_MOCK_API: "${USE_MOCK_API:-false}"
-      MOCK_API_BASE_URL: "http://mock-map-service:8085"
+      USE_MOCK_API: "${USE_MOCK_API}"
+      MOCK_API_BASE_URL: "${MOCK_API_BASE_URL}"
     ports:
       - "8081:8081" # HTTP
       - "19083:19083" # gRPC
