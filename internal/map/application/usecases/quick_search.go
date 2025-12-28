@@ -14,7 +14,7 @@ import (
 
 // QuickSearchUseCase handles quick search business logic
 type QuickSearchUseCase struct {
-	placesClient *external.GooglePlacesClient
+	placesClient external.PlacesClient
 	cache        *cache.PlaceCache
 	logger       *zap.Logger
 	cacheTTL     time.Duration
@@ -22,7 +22,7 @@ type QuickSearchUseCase struct {
 
 // NewQuickSearchUseCase creates a new QuickSearchUseCase
 func NewQuickSearchUseCase(
-	placesClient *external.GooglePlacesClient,
+	placesClient external.PlacesClient,
 	cache *cache.PlaceCache,
 	logger *zap.Logger,
 ) *QuickSearchUseCase {

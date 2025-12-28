@@ -1,0 +1,142 @@
+{
+    "places": [
+        {
+            "id": "mock_tokyo_ramen_1",
+            "displayName": {
+                "text": "一蘭拉麵 (Mock)",
+                "languageCode": "ja"
+            },
+            "formattedAddress": "東京都新宿區歌舞伎町1-1-1",
+            "location": {
+                "latitude": 35.6938,
+                "longitude": 139.7034
+            },
+            "rating": 4.5,
+            "userRatingCount": 5000,
+            "priceLevel": "PRICE_LEVEL_MODERATE",
+            "types": [
+                "restaurant",
+                "ramen_restaurant",
+                "food",
+                "point_of_interest"
+            ],
+            "nationalPhoneNumber": "03-1234-5678",
+            "websiteUri": "https://example.com/mock-ramen",
+            "photos": [
+                {
+                    "name": "places/mock_tokyo_ramen_1/photos/photo1",
+                    "widthPx": 1200,
+                    "heightPx": 800
+                },
+                {
+                    "name": "places/mock_tokyo_ramen_1/photos/photo2",
+                    "widthPx": 1200,
+                    "heightPx": 800
+                }
+            ],
+            "regularOpeningHours": {
+                "openNow": true,
+                "weekdayDescriptions": [
+                    "Monday: 11:00 AM – 10:00 PM",
+                    "Tuesday: 11:00 AM – 10:00 PM",
+                    "Wednesday: 11:00 AM – 10:00 PM",
+                    "Thursday: 11:00 AM – 10:00 PM",
+                    "Friday: 11:00 AM – 11:00 PM",
+                    "Saturday: 11:00 AM – 11:00 PM",
+                    "Sunday: 11:00 AM – 9:00 PM"
+                ]
+            }
+        },
+        {
+            "id": "mock_osaka_sushi_1",
+            "displayName": {
+                "text": "すしざんまい (Mock)",
+                "languageCode": "ja"
+            },
+            "formattedAddress": "大阪府大阪市中央區道頓堀1-1-1",
+            "location": {
+                "latitude": 34.6686,
+                "longitude": 135.5004
+            },
+            "rating": 4.7,
+            "userRatingCount": 3000,
+            "priceLevel": "PRICE_LEVEL_EXPENSIVE",
+            "types": [
+                "restaurant",
+                "sushi_restaurant",
+                "food"
+            ],
+            "nationalPhoneNumber": "06-1234-5678",
+            "websiteUri": "https://example.com/mock-sushi",
+            "photos": [
+                {
+                    "name": "places/mock_osaka_sushi_1/photos/photo1",
+                    "widthPx": 1200,
+                    "heightPx": 800
+                }
+            ]
+        },
+        {
+            "id": "mock_kyoto_tempura_1",
+            "displayName": {
+                "text": "天ぷら京都 (Mock)",
+                "languageCode": "ja"
+            },
+            "formattedAddress": "京都府京都市東山區祇園町1-1-1",
+            "location": {
+                "latitude": 35.0036,
+                "longitude": 135.7681
+            },
+            "rating": 4.6,
+            "userRatingCount": 2000,
+            "priceLevel": "PRICE_LEVEL_EXPENSIVE",
+            "types": [
+                "restaurant",
+                "japanese_restaurant",
+                "food"
+            ],
+            "nationalPhoneNumber": "075-1234-5678",
+            "websiteUri": "https://example.com/mock-tempura"
+        },
+        {
+            "id": "mock_fukuoka_ramen_1",
+            "displayName": {
+                "text": "博多一風堂 (Mock)",
+                "languageCode": "ja"
+            },
+            "formattedAddress": "福岡県福岡市博多區中洲1-1-1",
+            "location": {
+                "latitude": 33.5904,
+                "longitude": 130.4017
+            },
+            "rating": 4.4,
+            "userRatingCount": 4000,
+            "priceLevel": "PRICE_LEVEL_MODERATE",
+            "types": [
+                "restaurant",
+                "ramen_restaurant",
+                "food"
+            ]
+        },
+        {
+            "id": "mock_tokyo_sushi_1",
+            "displayName": {
+                "text": "築地寿司 (Mock)",
+                "languageCode": "ja"
+            },
+            "formattedAddress": "東京都中央區築地4-1-1",
+            "location": {
+                "latitude": 35.6654,
+                "longitude": 139.7707
+            },
+            "rating": 4.8,
+            "userRatingCount": 6000,
+            "priceLevel": "PRICE_LEVEL_VERY_EXPENSIVE",
+            "types": [
+                "restaurant",
+                "sushi_restaurant",
+                "food"
+            ]
+        }
+    ]
+}
