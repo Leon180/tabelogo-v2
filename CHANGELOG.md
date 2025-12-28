@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.10.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.9.0...tabelogo-v2-v0.10.0) (2025-12-28)
+
+
+### Features
+
+* **docker:** add mock map service to docker-compose ([281952b](https://github.com/Leon180/tabelogo-v2/commit/281952b57ccd26323f3f7839ab79a62b9e9022b6))
+* **k6:** add load testing scripts ([4abc180](https://github.com/Leon180/tabelogo-v2/commit/4abc1809ae7880cfda13cefcc8f6dbd4dc234214))
+* **map:** implement mock mode support ([0e56069](https://github.com/Leon180/tabelogo-v2/commit/0e56069acc0906c0b60dfe0c0c3b10b12cfd8f51))
+* **mock:** add configurable latency simulation ([3405c6c](https://github.com/Leon180/tabelogo-v2/commit/3405c6cc6f119fa7fc1413a654216fa86fbf3407))
+* **mock:** add mock map service for K6 testing ([3afa248](https://github.com/Leon180/tabelogo-v2/commit/3afa2481e05bc5c19596501ff4a1fb4a7080244a))
+* **mock:** complete mock service integration ([edb237a](https://github.com/Leon180/tabelogo-v2/commit/edb237ae3bc8d26e113909632bbcee9918d4fe2b))
+* **monitoring:** add K6 load testing Grafana dashboard ([97a3b3e](https://github.com/Leon180/tabelogo-v2/commit/97a3b3e754bff51e695f1a168a57d11664ca0a04))
+
+
+### Bug Fixes
+
+* env varible setting ([4a72550](https://github.com/Leon180/tabelogo-v2/commit/4a725506f89f8f5ef28861089db0e6653a93c18f))
+* **k6:** fix authentication error in load test script ([ce8f4c9](https://github.com/Leon180/tabelogo-v2/commit/ce8f4c94221aad8064a48e1bdbac201a66e52df8))
+* **k6:** use login API to get access token ([857b8e4](https://github.com/Leon180/tabelogo-v2/commit/857b8e4c89303250efe2bf190d74fdfcf803ac6d))
+* **map:** update use cases to use PlacesClient interface ([f9f8902](https://github.com/Leon180/tabelogo-v2/commit/f9f890213c58e6a3c930cdca1d262c27413e9252))
+
 ## [0.9.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.8.0...tabelogo-v2-v0.9.0) (2025-12-24)
 
 
