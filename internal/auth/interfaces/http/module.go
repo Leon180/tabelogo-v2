@@ -10,6 +10,7 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/auth/docs"
 	"github.com/Leon180/tabelogo-v2/pkg/config"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -116,6 +117,9 @@ func RegisterRoutes(
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+
+	// Prometheus metrics endpoint
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Manage lifecycle
 	server := &http.Server{
