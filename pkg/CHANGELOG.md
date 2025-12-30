@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.6.0...tabelogo-v2/pkg-v0.7.0) (2025-12-30)
+
+
+### Features
+
+* Week 2 - Prometheus metrics enhancement + Grafana dashboards ([9874e1f](https://github.com/Leon180/tabelogo-v2/commit/9874e1f5cb48f6affb6142a3cddc7df5a73c046e))
+
 ## [0.6.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2/pkg-v0.5.0...tabelogo-v2/pkg-v0.6.0) (2025-12-24)
 
 

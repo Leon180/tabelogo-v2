@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.10.0...tabelogo-v2-v0.11.0) (2025-12-30)
+
+
+### Features
+
+* implement Week 1 - Loki log aggregation + gRPC keepalive fix ([6241024](https://github.com/Leon180/tabelogo-v2/commit/624102402a0110c2ebe3a038fec57b7ca3e15928))
+* Week 2 - Prometheus metrics enhancement + Grafana dashboards ([9874e1f](https://github.com/Leon180/tabelogo-v2/commit/9874e1f5cb48f6affb6142a3cddc7df5a73c046e))
+
 ## [0.10.0](https://github.com/Leon180/tabelogo-v2/compare/tabelogo-v2-v0.9.0...tabelogo-v2-v0.10.0) (2025-12-28)
 
 
