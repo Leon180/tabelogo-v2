@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	mapv1 "github.com/Leon180/tabelogo-v2/api/gen/map/v1"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -27,8 +29,22 @@ type Params struct {
 
 // registerHooks registers lifecycle hooks for gRPC server
 func registerHooks(lc fx.Lifecycle, params Params) {
+	// Production-grade gRPC server with keepalive configuration
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(loggingInterceptor(params.Logger)),
+		// Keepalive Enforcement Policy - controls what client behaviors are allowed
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             10 * time.Second, // Minimum time between client pings (allows 10s intervals)
+			PermitWithoutStream: true,             // Allow pings even when there are no active streams
+		}),
+		// Keepalive Parameters - server-side keepalive configuration
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle:     5 * time.Minute,  // Close idle connections after 5 minutes
+			MaxConnectionAge:      30 * time.Minute, // Maximum connection lifetime (for load balancer rotation)
+			MaxConnectionAgeGrace: 10 * time.Second, // Grace period for pending RPCs after MaxConnectionAge
+			Time:                  1 * time.Minute,  // Server sends keepalive ping every 1 minute
+			Timeout:               20 * time.Second, // Wait 20 seconds for ping ack before considering connection dead
+		}),
 	)
 
 	// Register the MapService server

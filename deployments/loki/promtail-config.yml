@@ -1,0 +1,52 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      # Extract container name (remove leading slash)
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      
+      # Extract service name from tabelogo- prefix
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/tabelogo-(.*)'
+        target_label: 'service'
+      
+      # Add container ID as label
+      - source_labels: ['__meta_docker_container_id']
+        target_label: 'container_id'
+      
+      # Only collect logs from tabelogo containers
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/tabelogo-.*'
+        action: keep
+    
+    pipeline_stages:
+      # Try to parse JSON logs
+      - json:
+          expressions:
+            level: level
+            msg: msg
+            time: time
+            error: error
+      
+      # Add parsed level as label
+      - labels:
+          level:
+      
+      # Drop debug logs in production (optional - comment out for development)
+      # - match:
+      #     selector: '{level="debug"}'
+      #     action: drop

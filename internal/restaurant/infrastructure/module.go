@@ -23,8 +23,8 @@ func NewMapServiceConnection(cfg *config.Config, logger *zap.Logger) (*grpclib.C
 		Address:          cfg.MapService.GRPCAddr,
 		Timeout:          cfg.MapService.Timeout,
 		MaxRetries:       3,
-		KeepAliveTime:    30 * time.Second,
-		KeepAliveTimeout: 10 * time.Second,
+		KeepAliveTime:    60 * time.Second, // Send keepalive ping every 60 seconds (must be > server's MinTime of 10s)
+		KeepAliveTimeout: 20 * time.Second, // Wait 20 seconds for ping ack (matches server timeout)
 	}
 	return grpc.NewMapServiceConnection(grpcConfig, logger)
 }
