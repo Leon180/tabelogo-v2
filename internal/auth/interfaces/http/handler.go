@@ -6,6 +6,7 @@ import (
 	"github.com/Leon180/tabelogo-v2/internal/auth/application"
 	"github.com/Leon180/tabelogo-v2/internal/auth/domain/errors"
 	"github.com/Leon180/tabelogo-v2/internal/auth/domain/model"
+	"github.com/Leon180/tabelogo-v2/pkg/metrics"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -36,6 +37,7 @@ func NewAuthHandler(service application.AuthService, logger *zap.Logger) *AuthHa
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		metrics.AuthRegisterTotal.WithLabelValues("failed").Inc()
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "invalid_request",
 			Message: err.Error(),
@@ -46,12 +48,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	user, err := h.service.Register(c.Request.Context(), req.Email, req.Password, req.Username)
 	if err != nil {
 		if err == errors.ErrEmailAlreadyExists {
+			metrics.AuthRegisterTotal.WithLabelValues("email_exists").Inc()
 			c.JSON(http.StatusConflict, ErrorResponse{
 				Error:   "email_exists",
 				Message: "Email already registered",
 			})
 			return
 		}
+		metrics.AuthRegisterTotal.WithLabelValues("failed").Inc()
 		h.logger.Error("Failed to register user", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
@@ -60,6 +64,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	metrics.AuthRegisterTotal.WithLabelValues("success").Inc()
 	c.JSON(http.StatusCreated, RegisterResponse{
 		User: toUserResponse(user),
 	})
@@ -77,8 +82,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Failure 401 {object} ErrorResponse
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
+	timer := metrics.NewTimer(metrics.AuthLoginDuration)
+	defer timer.ObserveDuration()
+
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		metrics.AuthLoginTotal.WithLabelValues("failed").Inc()
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "invalid_request",
 			Message: err.Error(),
@@ -104,13 +113,25 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		req.RememberMe,
 	)
 	if err != nil {
-		if err == errors.ErrUserNotFound || err == errors.ErrInvalidPassword {
+		if err == errors.ErrUserNotFound {
+			metrics.AuthLoginTotal.WithLabelValues("failed").Inc()
+			metrics.AuthFailedLoginAttempts.WithLabelValues("user_not_found").Inc()
 			c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Error:   "invalid_credentials",
 				Message: "Invalid email or password",
 			})
 			return
 		}
+		if err == errors.ErrInvalidPassword {
+			metrics.AuthLoginTotal.WithLabelValues("failed").Inc()
+			metrics.AuthFailedLoginAttempts.WithLabelValues("wrong_password").Inc()
+			c.JSON(http.StatusUnauthorized, ErrorResponse{
+				Error:   "invalid_credentials",
+				Message: "Invalid email or password",
+			})
+			return
+		}
+		metrics.AuthLoginTotal.WithLabelValues("failed").Inc()
 		h.logger.Error("Failed to login", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
@@ -125,6 +146,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		h.logger.Error("Failed to validate token after login", zap.Error(err))
 	}
 
+	metrics.AuthLoginTotal.WithLabelValues("success").Inc()
 	c.JSON(http.StatusOK, LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -146,6 +168,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		metrics.AuthTokenRefreshTotal.WithLabelValues("failed").Inc()
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "invalid_request",
 			Message: err.Error(),
@@ -155,6 +178,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 	accessToken, refreshToken, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
+		metrics.AuthTokenRefreshTotal.WithLabelValues("failed").Inc()
 		c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Error:   "invalid_token",
 			Message: "Invalid or expired refresh token",
@@ -162,6 +186,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
+	metrics.AuthTokenRefreshTotal.WithLabelValues("success").Inc()
 	c.JSON(http.StatusOK, RefreshTokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -180,6 +205,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 func (h *AuthHandler) ValidateToken(c *gin.Context) {
 	token := c.GetHeader("Authorization")
 	if token == "" {
+		metrics.AuthTokenValidationTotal.WithLabelValues("invalid").Inc()
 		c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Error:   "missing_token",
 			Message: "Authorization header is required",
@@ -194,12 +220,14 @@ func (h *AuthHandler) ValidateToken(c *gin.Context) {
 
 	user, err := h.service.ValidateToken(c.Request.Context(), token)
 	if err != nil {
+		metrics.AuthTokenValidationTotal.WithLabelValues("invalid").Inc()
 		c.JSON(http.StatusUnauthorized, ValidateTokenResponse{
 			Valid: false,
 		})
 		return
 	}
 
+	metrics.AuthTokenValidationTotal.WithLabelValues("valid").Inc()
 	c.JSON(http.StatusOK, ValidateTokenResponse{
 		Valid: true,
 		User:  toUserResponse(user),

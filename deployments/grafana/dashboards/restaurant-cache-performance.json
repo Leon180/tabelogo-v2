@@ -25,7 +25,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${datasource}"
             },
             "fieldConfig": {
                 "defaults": {
@@ -80,7 +80,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "prometheus"
+                        "uid": "${datasource}"
                     },
                     "expr": "rate(restaurant_cache_hits_total[5m]) / (rate(restaurant_cache_hits_total[5m]) + rate(restaurant_cache_misses_total[5m])) * 100",
                     "refId": "A"
@@ -92,7 +92,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${datasource}"
             },
             "fieldConfig": {
                 "defaults": {
@@ -197,7 +197,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "prometheus"
+                        "uid": "${datasource}"
                     },
                     "expr": "rate(restaurant_map_service_calls_total{status=\"success\"}[5m])",
                     "legendFormat": "success",
@@ -206,7 +206,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "prometheus"
+                        "uid": "${datasource}"
                     },
                     "expr": "rate(restaurant_map_service_calls_total{status=\"error\"}[5m])",
                     "legendFormat": "error",
@@ -219,7 +219,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${datasource}"
             },
             "fieldConfig": {
                 "defaults": {
@@ -266,7 +266,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "prometheus"
+                        "uid": "${datasource}"
                     },
                     "expr": "rate(restaurant_cache_hits_total[1h]) * 0.005 * 3600",
                     "refId": "A"
@@ -279,7 +279,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${datasource}"
             },
             "fieldConfig": {
                 "defaults": {
@@ -343,7 +343,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "prometheus"
+                        "uid": "${datasource}"
                     },
                     "expr": "rate(restaurant_sync_duration_seconds_bucket[5m])",
                     "format": "heatmap",
@@ -357,7 +357,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${datasource}"
             },
             "fieldConfig": {
                 "defaults": {
@@ -435,7 +435,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "prometheus"
+                        "uid": "${datasource}"
                     },
                     "expr": "rate(restaurant_stale_data_returns_total[5m])",
                     "refId": "A"
