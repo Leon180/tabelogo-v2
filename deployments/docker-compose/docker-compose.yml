@@ -366,6 +366,41 @@ services:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+      - loki
+    networks:
+      - tabelogo-network
+    restart: unless-stopped
+
+  # Loki - Log aggregation
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: tabelogo-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ../loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - tabelogo-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Promtail - Log collector
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: tabelogo-promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../loki/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
     networks:
       - tabelogo-network
     restart: unless-stopped
@@ -382,6 +417,8 @@ volumes:
   prometheus-data:
     driver: local
   grafana-data:
+    driver: local
+  loki-data:
     driver: local
 
 networks:
